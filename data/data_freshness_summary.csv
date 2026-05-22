@@ -1,0 +1,5 @@
+metric,value,note
+qualified_teams_count,48,Updated to all 48 qualified teams
+placeholder_teams_remaining,0,Should be 0 for teams.csv after update
+group_stage_matches_with_two_team_ids,72,All group fixtures can be joined to teams_updated.csv
+knockout_matches_with_bracket_placeholders,32,Expected before tournament; these should not be hype-scored

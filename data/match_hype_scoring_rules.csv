@@ -1,0 +1,9 @@
+component,weight_points,source,rule
+pair_quality,25,team_hype_profiles.csv,"Average of both teams quality_score_10, scaled. Avoid one-sided mismatch inflation."
+pair_star_power,20,team_hype_profiles.csv + key_players_curated.csv,Average star_power_score_10 plus count of A-tier key players. Do not use random player stat outliers.
+competitive_balance,15,team_hype_profiles.csv,Reward closer team quality. Penalize heavy mismatches even if one team is elite.
+squad_depth,10,team_hype_profiles.csv,Average squad_depth_score_10.
+fan_interest_storyline,10,team_hype_profiles.csv + match_rivalry_overrides.csv,"Use fan interest, host/derby/rivalry/storyline boosts."
+stage_importance,15,tournament_stages.csv/matches_updated.csv,"Group low, knockouts higher. Only score if both teams are known."
+favourite_club_involvement,5,key_players_curated.csv/player stats,"Optional, dynamic to selected club. Do not hardcode Barcelona."
+india_watchability,0,matches_updated.csv,Show as separate label. Do not let timing distort football hype.

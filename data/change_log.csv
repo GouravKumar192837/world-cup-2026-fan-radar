@@ -1,0 +1,9 @@
+file,change,source
+teams_updated.csv,Replaced Winner UEFA Playoff D with Czechia in Group A,FIFA qualified teams and final draw groups
+teams_updated.csv,Replaced Winner UEFA Playoff A with Bosnia and Herzegovina in Group B,FIFA qualified teams and final draw groups
+teams_updated.csv,Replaced Winner UEFA Playoff C with Türkiye in Group D,FIFA qualified teams and final draw groups
+teams_updated.csv,Replaced Winner UEFA Playoff B with Sweden in Group F,FIFA qualified teams and final draw groups
+teams_updated.csv,Replaced Winner FIFA Playoff 2 with Iraq in Group I,FIFA qualified teams and final draw groups
+teams_updated.csv,Replaced Winner FIFA Playoff 1 with Congo DR in Group K,FIFA qualified teams and final draw groups
+matches_updated.csv,Corrected Match 100 label from W95 vs W100 to W95 vs W96,FIFA match schedule page
+tournament_stages.csv,No change,Existing uploaded file

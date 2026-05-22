@@ -1,0 +1,8 @@
+rule_area,rule
+Display language,"Never display raw file names or CSV names in the user-facing app. Use labels like Updated fixtures, Qualified teams, Key player guide, Stats lens."
+Player truth hierarchy,Fan-facing key players and match summaries must use key_players_curated_v4 and country_story_profiles_v4 before any raw statistical dataset.
+Expected XI,Expected XI must come from expected_xi_curated_v4 if available. It is fan-curated and not official. Do not build expected XI from raw form scores alone.
+Player lists,"Country Radar should list curated key players and expected XI first. Raw stats players belong only in Stats Lens, clearly labelled."
+Matchups,"Show Club Watch matchup cards only from club_matchup_watch_curated_v4. If no curated matchup exists, show no major curated matchup available instead of generating random names."
+Planner,Planner defaults to chronological kickoff order. Sorting reset must return to chronological order.
+Comparison,Comparison lives only in Player Watchlist unless a same-page radar is provided. Remove comparison checkboxes elsewhere.

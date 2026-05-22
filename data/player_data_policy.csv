@@ -1,0 +1,7 @@
+file,purpose,truth_level,use_in_app,notes
+teams_updated.csv,Final 48 qualified countries and group assignment,Primary source for country eligibility,Filter all country/player views to qualified teams only,Replaces teams.csv
+matches_updated.csv,Updated fixtures with resolved group-stage playoff teams,Primary source for fixtures,"Use for schedules, watch planner, match cards",Knockout placeholders remain valid until tournament results are known
+country_name_map.csv,Country/name normalization,Utility file,Map player nationality names to team names,"Prevents USA/United States, Korea/South Korea issues"
+star_players.csv,Fan-recognisable key-player layer,"Curated fan layer, not final squad proof","Default Key Players, match descriptions, star-power hype, Club Watch ordering",Do not label as official squad
+squad_status.csv,Public squad/call-up layer where available,Only rows with Final/Provisional based on source,Squad-aware XI and badges,"Currently partial, do not assume availability for all countries"
+players_data-2025_2026.csv,Club-form statistics,Supporting stats only,"Radar comparisons, form lens, attach stats to key players",Do not use as main source for best XI or key-player ranking

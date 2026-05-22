@@ -1,0 +1,49 @@
+country,fifa_code,group_letter,quality_score_10,star_power_score_10,squad_depth_score_10,fan_interest_score_10,tournament_storyline,data_status,last_updated
+Mexico,MEX,A,6,6,6,6,"Host-nation pressure, attacking transition and home-continent atmosphere",curated_fan_guide_not_official_squad,2026-05-22
+South Africa,RSA,A,4,4,5,5,Underdog African storyline and physical tournament profile,curated_fan_guide_not_official_squad,2026-05-22
+South Korea,KOR,A,7,7,6,7,Son-led Asian contender with pace and pressing interest,curated_fan_guide_not_official_squad,2026-05-22
+Czechia,CZE,A,5,5,6,5,Organised European side with set-piece and duel strength,curated_fan_guide_not_official_squad,2026-05-22
+Canada,CAN,B,6,6,5,6,Host-nation energy led by athletic transition players,curated_fan_guide_not_official_squad,2026-05-22
+Bosnia and Herzegovina,BIH,B,4,5,4,4,Veteran European quality but lower global fan pull,curated_fan_guide_not_official_squad,2026-05-22
+Qatar,QAT,B,4,4,4,5,Recent tournament host with regional familiarity,curated_fan_guide_not_official_squad,2026-05-22
+Switzerland,SUI,B,6,6,7,6,Balanced European squad with strong structure,curated_fan_guide_not_official_squad,2026-05-22
+Brazil,BRA,C,10,10,8,10,Global giant with elite attacking names and huge fan interest,curated_fan_guide_not_official_squad,2026-05-22
+Morocco,MAR,C,8,8,8,8,2022 semi-finalists with strong defensive identity and elite wide talent,curated_fan_guide_not_official_squad,2026-05-22
+Haiti,HAI,C,3,3,3,4,Underdog story and rare World Cup stage,curated_fan_guide_not_official_squad,2026-05-22
+Scotland,SCO,C,6,5,6,6,Passionate fanbase and experienced Premier League/European players,curated_fan_guide_not_official_squad,2026-05-22
+USA,USA,D,7,7,6,8,Host nation with young European-based core and major home interest,curated_fan_guide_not_official_squad,2026-05-22
+Paraguay,PAR,D,5,5,5,5,South American grit and compact competitive profile,curated_fan_guide_not_official_squad,2026-05-22
+Australia,AUS,D,5,5,5,6,Consistent tournament fighter with strong fan travelling culture,curated_fan_guide_not_official_squad,2026-05-22
+Türkiye,TUR,D,7,7,6,7,High-energy side with creative European stars and passionate support,curated_fan_guide_not_official_squad,2026-05-22
+Germany,GER,E,9,9,8,9,Tournament heavyweight with elite midfield/attacking depth,curated_fan_guide_not_official_squad,2026-05-22
+Curaçao,CUR,E,3,3,3,5,Debut/small-nation story and Dutch-Caribbean identity,curated_fan_guide_not_official_squad,2026-05-22
+Côte d'Ivoire,CIV,E,6,6,6,6,Physical African contender with familiar European-based players,curated_fan_guide_not_official_squad,2026-05-22
+Ecuador,ECU,E,6,6,7,6,Athletic South American side with strong midfield/defensive talent,curated_fan_guide_not_official_squad,2026-05-22
+Netherlands,NED,F,8,8,8,8,Major European nation with elite defenders and technical midfielders,curated_fan_guide_not_official_squad,2026-05-22
+Japan,JPN,F,7,7,7,7,"Technical, organised and increasingly deep European-based squad",curated_fan_guide_not_official_squad,2026-05-22
+Sweden,SWE,F,6,6,5,6,Physical European side with high-profile attacking options,curated_fan_guide_not_official_squad,2026-05-22
+Tunisia,TUN,F,4,4,5,5,Disciplined North African side with tournament experience,curated_fan_guide_not_official_squad,2026-05-22
+Belgium,BEL,G,8,8,7,8,Star attackers and experienced elite-level core,curated_fan_guide_not_official_squad,2026-05-22
+Egypt,EGY,G,7,7,5,8,Salah-led side with major star appeal,curated_fan_guide_not_official_squad,2026-05-22
+IR Iran,IRN,G,5,5,5,5,Experienced Asian qualifier with compact defensive profile,curated_fan_guide_not_official_squad,2026-05-22
+New Zealand,NZL,G,4,4,4,5,Oceania representative with underdog storyline,curated_fan_guide_not_official_squad,2026-05-22
+Spain,ESP,H,9,9,8,9,Elite technical side with world-class midfield and wingers,curated_fan_guide_not_official_squad,2026-05-22
+Cabo Verde,CPV,H,4,4,4,6,Historic debut and underdog fan storyline,curated_fan_guide_not_official_squad,2026-05-22
+Saudi Arabia,KSA,H,5,5,4,6,Experienced Asian side with strong domestic-league core,curated_fan_guide_not_official_squad,2026-05-22
+Uruguay,URU,H,8,8,7,8,High-intensity South American team with elite attackers and midfielders,curated_fan_guide_not_official_squad,2026-05-22
+France,FRA,I,10,10,9,10,Deepest elite player pool and global superstar appeal,curated_fan_guide_not_official_squad,2026-05-22
+Senegal,SEN,I,7,7,7,7,Physical African contender with elite forwards and defensive leaders,curated_fan_guide_not_official_squad,2026-05-22
+Iraq,IRQ,I,4,4,4,5,Historic return and passionate regional support,curated_fan_guide_not_official_squad,2026-05-22
+Norway,NOR,I,7,9,5,8,Huge star power through Haaland and Odegaard but less depth than giants,curated_fan_guide_not_official_squad,2026-05-22
+Argentina,ARG,J,10,9,8,10,Defending champion with huge global following and elite attacking talent,curated_fan_guide_not_official_squad,2026-05-22
+Algeria,ALG,J,6,6,5,6,North African attacking flair and experienced names,curated_fan_guide_not_official_squad,2026-05-22
+Austria,AUT,J,6,6,7,6,High-pressing European side with strong team structure,curated_fan_guide_not_official_squad,2026-05-22
+Jordan,JOR,J,4,4,4,6,Historic qualification and strong underdog storyline,curated_fan_guide_not_official_squad,2026-05-22
+Portugal,POR,K,9,9,8,10,Elite technical depth and Ronaldo-era storyline,curated_fan_guide_not_official_squad,2026-05-22
+Congo DR,COD,K,5,5,5,5,Physical African side with strong diaspora talent,curated_fan_guide_not_official_squad,2026-05-22
+Uzbekistan,UZB,K,5,5,5,6,Historic debut with rising technical talent,curated_fan_guide_not_official_squad,2026-05-22
+Colombia,COL,K,8,8,7,8,South American flair with elite creators and wide players,curated_fan_guide_not_official_squad,2026-05-22
+England,ENG,L,9,9,8,10,Global fan interest and elite attacking/midfield depth,curated_fan_guide_not_official_squad,2026-05-22
+Croatia,CRO,L,7,7,7,8,Tournament pedigree and midfield identity,curated_fan_guide_not_official_squad,2026-05-22
+Ghana,GHA,L,6,6,5,7,Recognisable African side with attacking and midfield talent,curated_fan_guide_not_official_squad,2026-05-22
+Panama,PAN,L,4,4,4,5,CONCACAF tournament fighter and underdog appeal,curated_fan_guide_not_official_squad,2026-05-22

@@ -1,0 +1,7 @@
+file,role,instruction
+players_data-2025_2026.csv,supporting_stats_only,"Never use this file alone to choose key players, best XI, match headline players, or match hype star power. Use it only to attach stats and for optional Form Lens views."
+key_players_curated.csv,primary_fan_key_player_layer,"Use this first for key players, match descriptions, star power, fan XI and club watch priority. Not official squad data."
+team_hype_profiles.csv,primary_team_hype_layer,Use this for team quality/star/depth/fan-interest scores and match hype. Do not derive match hype primarily from player stat outliers.
+squad_status.csv,official_or_provisional_squad_context_when_available,"Use this for squad badges only. If absent or incomplete, do not invent final squads."
+teams_updated.csv,qualified_country_truth,Only countries here are World Cup countries.
+matches_updated.csv,fixture_truth,Use this for fixtures. Do not replace knockout placeholders.

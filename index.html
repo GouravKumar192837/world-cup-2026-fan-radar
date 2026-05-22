@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>World Cup 2026 Fan Radar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="loader" class="loading-screen">
+    <div class="loader-ball"></div>
+    <p>Loading World Cup radar...</p>
+  </div>
+
+  <main class="app-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Curated World Cup fan guide</p>
+        <h1>World Cup 2026 Fan Radar</h1>
+        <p>Find the matches worth clearing your calendar for, the national-team stories to follow, and the players to track before final squads are confirmed.</p>
+        <div class="hero-badges">
+          <span id="matchCount">104 fixtures</span>
+          <span id="teamCount">48 teams</span>
+          <span id="playerCount">Player pool</span>
+          <span>IST planner</span>
+        </div>
+      </div>
+      <section class="hero-panel" aria-label="Data note">
+        <strong>Data note</strong>
+        <p>This fan guide blends curated football context with a supporting Stats Lens. Shortlists are not official World Cup squads.</p>
+        <p class="stale-note">Some fixtures may contain placeholders until tournament paths are known. Refresh the fixture guide later to unlock full neutral watch scoring.</p>
+        <div class="pulse-row">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </section>
+    </header>
+
+    <nav class="tabs" aria-label="Dashboard sections">
+      <button class="tab active" data-tab="matches">Must-Watch</button>
+      <button class="tab" data-tab="countries">Country Radar</button>
+      <button class="tab" data-tab="players">Player Watchlist</button>
+      <button class="tab" data-tab="club">Club Watch</button>
+      <button class="tab" data-tab="planner">India Planner</button>
+    </nav>
+
+    <section id="error" class="error hidden"></section>
+
+    <section id="matches" class="panel active">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Neutral watch guide</p>
+          <h2>Top 10 Must-Watch Matches</h2>
+          <p>Neutral Watch Score ranks fixtures by team quality, player pull, closeness, story value, and stage importance. Club relevance is shown separately.</p>
+        </div>
+        <div class="stack-controls">
+          <label class="select-label">Favourite club <select id="hypeClubSelect"></select></label>
+          <label class="switch"><input id="clubLensToggle" type="checkbox"><span></span> Prioritise my club lens</label>
+        </div>
+      </div>
+      <div class="filters">
+        <button id="resetMatches" class="ghost-btn">Reset Page</button>
+        <button id="clearMatchFilters" class="ghost-btn">Clear Filters</button>
+      </div>
+      <div id="hypeChart" class="chart-card"></div>
+      <p class="chart-note">Higher bars mean stronger neutral watch value. Club relevance is a separate supporter lens.</p>
+      <details class="details-card hype-info" open>
+        <summary>How the score works</summary>
+        <p>Neutral Watch Score combines team quality, recognisable player pull, match closeness, storyline value, and stage importance. India timing and favourite-club relevance are shown separately.</p>
+      </details>
+      <div id="freshnessStats" class="score-grid data-freshness"></div>
+      <div id="topMatches" class="match-grid"></div>
+    </section>
+
+    <section id="countries" class="panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Country fan guide</p>
+          <h2>Country Radar</h2>
+          <p>Choose a team to explore its story, expected XI guide, key players, and optional Stats Lens.</p>
+        </div>
+        <select id="countrySelect"></select>
+      </div>
+      <div class="filters">
+        <select id="countryView">
+          <option value="overview">Overview</option>
+          <option value="xi">Expected XI</option>
+          <option value="key">Key Players</option>
+          <option value="stats">Stats Lens</option>
+        </select>
+        <button id="resetCountry" class="ghost-btn">Reset Page</button>
+        <button id="clearCountryFilters" class="ghost-btn">Clear Filters</button>
+      </div>
+      <div class="country-guide-layout">
+        <div>
+          <h3>Country Guide <span class="not-official">not official squad</span></h3>
+          <input id="countryPlayerSearch" type="search" placeholder="Search Stats Lens">
+          <div id="shortlist" class="shortlist"></div>
+          <div id="countryPlayerTable" class="table-card"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="players" class="panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Club-form tracker</p>
+          <h2>Player Watchlist</h2>
+          <p>Browse the curated player guide, open the Stats Lens, or compare two similar-role players.</p>
+        </div>
+      </div>
+      <div class="filters">
+        <input id="playerSearch" type="search" placeholder="Search player">
+        <select id="nationalityFilter"><option value="">All nationalities</option></select>
+        <select id="clubFilter"><option value="">All clubs</option></select>
+        <select id="leagueFilter"><option value="">All leagues</option></select>
+        <select id="positionFilter"><option value="">All positions</option></select>
+        <select id="ageFilter">
+          <option value="">All ages</option>
+          <option value="u23">U23</option>
+          <option value="prime">23-29</option>
+          <option value="veteran">30+</option>
+        </select>
+        <label class="range-label">Min minutes <input id="minutesFilter" type="range" min="0" max="2500" step="100" value="600"><span id="minutesValue">600</span></label>
+        <button id="resetPlayers" class="ghost-btn">Reset Page</button>
+        <button id="clearPlayerFilters" class="ghost-btn">Clear Filters</button>
+      </div>
+      <div class="watch-tabs">
+        <button class="pill active" data-list="key">Key Players</button>
+        <button class="pill" data-list="stats">Stats Lens</button>
+        <button class="pill" data-list="comparison">Comparison</button>
+      </div>
+      <div id="playerTable" class="table-card"></div>
+      <div class="comparison-card">
+        <div class="section-head compact">
+          <div>
+            <h3>Player Radar Comparison</h3>
+            <p>Select comparable players from the table. Radar axes adjust to the selected role.</p>
+          </div>
+          <button id="clearCompare" class="ghost-btn">Clear comparison</button>
+        </div>
+        <div id="compareNotice" class="chart-note"></div>
+        <div id="radarCompare" class="radar-wrap"></div>
+        <p class="chart-note">Radar scores are normalized within comparable position groups, not across all players.</p>
+      </div>
+    </section>
+
+    <section id="club" class="panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Club-form lens</p>
+          <h2 id="clubTitle">Club World Cup Watch</h2>
+          <p>Qualified-country players from one club, with fan-friendly comparisons and players not shown kept separate. Not official World Cup squad information.</p>
+        </div>
+        <select id="clubWatchSelect"></select>
+      </div>
+      <div class="filters">
+        <button id="resetClub" class="ghost-btn">Reset Page</button>
+        <button id="clearClubFilters" class="ghost-btn">Clear Filters</button>
+      </div>
+      <div id="clubSummary" class="score-grid interactive-grid"></div>
+      <div class="country-layout bottom">
+        <div>
+          <h3>Country Representation</h3>
+          <div id="clubCountryChart" class="chart-card"></div>
+        </div>
+        <div>
+          <h3>Position Distribution</h3>
+          <div id="clubPositionChart" class="chart-card"></div>
+        </div>
+      </div>
+      <div class="filters">
+        <input id="clubSearch" type="search" placeholder="Search club players">
+      </div>
+      <div id="clubTable" class="table-card"></div>
+      <section class="details-card" open>
+        <h3>World Cup Matchup Watch</h3>
+        <div id="clubMatchups" class="compact-list"></div>
+      </section>
+      <details id="playersNotShown" class="details-card">
+        <summary>Players not shown</summary>
+        <p>These club players are outside the finalized qualified-country pool or could not be matched to a qualified team.</p>
+        <div id="notShownList" class="compact-list"></div>
+      </details>
+    </section>
+
+    <section id="planner" class="panel">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">India watch planner</p>
+          <h2>Kickoffs in IST</h2>
+          <p>Sort fixtures by practical watch windows and save favourites locally in your browser.</p>
+        </div>
+      </div>
+      <div class="filters">
+        <select id="plannerTeam"><option value="">All teams</option></select>
+        <input id="plannerDate" type="date">
+        <select id="plannerStage"><option value="">All stages</option></select>
+        <select id="watchabilityFilter">
+          <option value="">All watch windows</option>
+          <option value="Prime Time">Prime Time</option>
+          <option value="Late Night">Late Night</option>
+          <option value="Early Morning">Early Morning</option>
+          <option value="Daytime">Daytime</option>
+          <option value="Weekend">Weekend</option>
+          <option value="Favourites">Favourites</option>
+        </select>
+        <input id="plannerSearch" type="search" placeholder="Search fixtures">
+        <select id="plannerSortSelect">
+          <option value="date">Sort by kickoff time</option>
+          <option value="match">Sort by match name</option>
+          <option value="hype">Sort by Neutral Watch Score</option>
+          <option value="window">Sort by watch window</option>
+        </select>
+        <label class="switch"><input id="plannerClubLens" type="checkbox"><span></span> Club lens</label>
+        <button id="resetPlanner" class="ghost-btn">Reset Page</button>
+        <button id="clearPlannerFilters" class="ghost-btn">Clear Filters</button>
+        <button id="showAllPlanner" class="ghost-btn">Show All Matches</button>
+      </div>
+      <div id="watchBuckets" class="score-grid"></div>
+      <div id="savedMatches" class="saved-panel"></div>
+      <div id="plannerList" class="planner-list"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

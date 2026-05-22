@@ -1,0 +1,133 @@
+country,formation,position_slot,player_name,position_group,role_description,confidence,selection_status,last_updated,notes
+Spain,4-3-3,GK,Unai Simón,Goalkeeper,First-choice goalkeeper,Medium,fan_expected_xi_not_official,2026-05-22,"Curated fan expectation, not official."
+Spain,4-3-3,RB,Dani Carvajal,Defender,Right-back,Medium,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+Spain,4-3-3,CB,Robin Le Normand,Defender,Centre-back,Low,fan_expected_xi_not_official,2026-05-22,Centre-back slot is uncertain.
+Spain,4-3-3,CB,Aymeric Laporte,Defender,Centre-back,Low,fan_expected_xi_not_official,2026-05-22,Centre-back slot is uncertain.
+Spain,4-3-3,LB,Marc Cucurella,Defender,Left-back,Low,fan_expected_xi_not_official,2026-05-22,Left-back slot is uncertain.
+Spain,4-3-3,DM,Rodri,Midfielder,Defensive midfield controller,High,fan_expected_xi_not_official,2026-05-22,Key player if fit and selected.
+Spain,4-3-3,CM,Pedri,Midfielder,Creative midfielder,High,fan_expected_xi_not_official,2026-05-22,Key creator.
+Spain,4-3-3,CM,Fabián Ruiz,Midfielder,Central midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Could vary with Gavi/Dani Olmo/Merino.
+Spain,4-3-3,RW,Lamine Yamal,Forward,Right winger,High,fan_expected_xi_not_official,2026-05-22,Key winger.
+Spain,4-3-3,ST,Álvaro Morata,Forward,Striker,Medium,fan_expected_xi_not_official,2026-05-22,Striker slot can vary.
+Spain,4-3-3,LW,Nico Williams,Forward,Left winger,High,fan_expected_xi_not_official,2026-05-22,Key winger.
+France,4-3-3,GK,Mike Maignan,Goalkeeper,Goalkeeper,High,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+France,4-3-3,RB,Jules Koundé,Defender,Right-back,High,fan_expected_xi_not_official,2026-05-22,Likely defensive full-back profile.
+France,4-3-3,CB,William Saliba,Defender,Centre-back,High,fan_expected_xi_not_official,2026-05-22,Key centre-back.
+France,4-3-3,CB,Dayot Upamecano,Defender,Centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Centre-back slot can vary.
+France,4-3-3,LB,Theo Hernández,Defender,Left-back,High,fan_expected_xi_not_official,2026-05-22,Attacking left-back.
+France,4-3-3,DM,Aurélien Tchouaméni,Midfielder,Defensive midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfield anchor.
+France,4-3-3,CM,Eduardo Camavinga,Midfielder,Central midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Midfield slot can vary.
+France,4-3-3,AM,Antoine Griezmann,Forward,Creator / second striker,Medium,fan_expected_xi_not_official,2026-05-22,Role and selection depend on squad context.
+France,4-3-3,RW,Ousmane Dembélé,Forward,Winger / creator,High,fan_expected_xi_not_official,2026-05-22,Key attacker.
+France,4-3-3,ST,Kylian Mbappé,Forward,Central/left forward,High,fan_expected_xi_not_official,2026-05-22,Headline attacker.
+France,4-3-3,LW,Michael Olise,Forward,Right-sided creator,Medium,fan_expected_xi_not_official,2026-05-22,Attacking slot can vary with Barcola/others.
+England,4-2-3-1,GK,Jordan Pickford,Goalkeeper,Goalkeeper,High,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+England,4-2-3-1,RB,Trent Alexander-Arnold,Defender,Creative right-back,Medium,fan_expected_xi_not_official,2026-05-22,Could vary by tactical setup.
+England,4-2-3-1,CB,John Stones,Defender,Centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Centre-back slot can vary.
+England,4-2-3-1,CB,Marc Guéhi,Defender,Centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Centre-back slot can vary.
+England,4-2-3-1,LB,Ben Chilwell,Defender,Left-back,Low,fan_expected_xi_not_official,2026-05-22,Left-back slot uncertain.
+England,4-2-3-1,DM,Declan Rice,Midfielder,Defensive midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+England,4-2-3-1,CM,Jude Bellingham,Midfielder,Advanced midfielder,High,fan_expected_xi_not_official,2026-05-22,Headline midfielder.
+England,4-2-3-1,RW,Bukayo Saka,Forward,Right winger,High,fan_expected_xi_not_official,2026-05-22,Key winger.
+England,4-2-3-1,AM,Phil Foden,Midfielder,Creator,High,fan_expected_xi_not_official,2026-05-22,Key creator.
+England,4-2-3-1,LW,Marcus Rashford,Forward,Left forward,Medium,fan_expected_xi_not_official,2026-05-22,Wide slot can vary.
+England,4-2-3-1,ST,Harry Kane,Forward,Striker,High,fan_expected_xi_not_official,2026-05-22,Headline striker.
+Brazil,4-3-3,GK,Alisson,Goalkeeper,Goalkeeper,High,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+Brazil,4-3-3,RB,Danilo,Defender,Right-back,Medium,fan_expected_xi_not_official,2026-05-22,Defensive slot can vary.
+Brazil,4-3-3,CB,Marquinhos,Defender,Centre-back,High,fan_expected_xi_not_official,2026-05-22,Key defender.
+Brazil,4-3-3,CB,Éder Militão,Defender,Centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Fitness/selection dependent.
+Brazil,4-3-3,LB,Guilherme Arana,Defender,Left-back,Low,fan_expected_xi_not_official,2026-05-22,Left-back slot uncertain.
+Brazil,4-3-3,DM,Bruno Guimarães,Midfielder,Central midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+Brazil,4-3-3,CM,Lucas Paquetá,Midfielder,Attacking midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Midfield role can vary.
+Brazil,4-3-3,CM,Casemiro,Midfielder,Defensive midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Senior option.
+Brazil,4-3-3,RW,Raphinha,Forward,Right winger,High,fan_expected_xi_not_official,2026-05-22,Key winger.
+Brazil,4-3-3,ST,Rodrygo,Forward,Forward,Medium,fan_expected_xi_not_official,2026-05-22,Attacking slot can vary.
+Brazil,4-3-3,LW,Vinícius Júnior,Forward,Left winger,High,fan_expected_xi_not_official,2026-05-22,Headline attacker.
+Argentina,4-3-3,GK,Emiliano Martínez,Goalkeeper,Goalkeeper,High,fan_expected_xi_not_official,2026-05-22,Key goalkeeper.
+Argentina,4-3-3,RB,Nahuel Molina,Defender,Right-back,Medium,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+Argentina,4-3-3,CB,Cristian Romero,Defender,Centre-back,High,fan_expected_xi_not_official,2026-05-22,Key defender.
+Argentina,4-3-3,CB,Lisandro Martínez,Defender,Centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Fitness/selection dependent.
+Argentina,4-3-3,LB,Nicolás Tagliafico,Defender,Left-back,Medium,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+Argentina,4-3-3,DM,Enzo Fernández,Midfielder,Central midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+Argentina,4-3-3,CM,Rodrigo De Paul,Midfielder,Box-to-box midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+Argentina,4-3-3,CM,Alexis Mac Allister,Midfielder,Central midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+Argentina,4-3-3,RW,Lionel Messi,Forward,Creator / forward,High,fan_expected_xi_not_official,2026-05-22,Headline player if selected.
+Argentina,4-3-3,ST,Julián Álvarez,Forward,Forward,High,fan_expected_xi_not_official,2026-05-22,Key attacker.
+Argentina,4-3-3,LW,Lautaro Martínez,Forward,Striker,Medium,fan_expected_xi_not_official,2026-05-22,Attacking configuration can vary.
+Portugal,4-3-3,GK,Diogo Costa,Goalkeeper,Goalkeeper,High,fan_expected_xi_not_official,2026-05-22,Key goalkeeper.
+Portugal,4-3-3,RB,João Cancelo,Defender,Full-back,Medium,fan_expected_xi_not_official,2026-05-22,Full-back slot can vary.
+Portugal,4-3-3,CB,Rúben Dias,Defender,Centre-back,High,fan_expected_xi_not_official,2026-05-22,Key defender.
+Portugal,4-3-3,CB,António Silva,Defender,Centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Centre-back slot can vary.
+Portugal,4-3-3,LB,Nuno Mendes,Defender,Left-back,High,fan_expected_xi_not_official,2026-05-22,Key full-back.
+Portugal,4-3-3,CM,Vitinha,Midfielder,Central midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+Portugal,4-3-3,CM,Bruno Fernandes,Midfielder,Creator,High,fan_expected_xi_not_official,2026-05-22,Key creator.
+Portugal,4-3-3,CM,Bernardo Silva,Midfielder,Creator / wide midfielder,High,fan_expected_xi_not_official,2026-05-22,Key creator.
+Portugal,4-3-3,RW,Rafael Leão,Forward,Winger,Medium,fan_expected_xi_not_official,2026-05-22,Wide slot can vary.
+Portugal,4-3-3,ST,Cristiano Ronaldo,Forward,Striker,Medium,fan_expected_xi_not_official,2026-05-22,Selection/role can vary.
+Portugal,4-3-3,LW,Pedro Neto,Forward,Winger,Medium,fan_expected_xi_not_official,2026-05-22,Attacking slot can vary.
+Germany,4-2-3-1,GK,Manuel Neuer,Goalkeeper,Goalkeeper,Medium,fan_expected_xi_not_official,2026-05-22,Goalkeeper slot can vary.
+Germany,4-2-3-1,RB,Joshua Kimmich,Midfielder,Right-back / controller,Medium,fan_expected_xi_not_official,2026-05-22,Role can vary.
+Germany,4-2-3-1,CB,Antonio Rüdiger,Defender,Centre-back,High,fan_expected_xi_not_official,2026-05-22,Key defender.
+Germany,4-2-3-1,CB,Jonathan Tah,Defender,Centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Centre-back slot can vary.
+Germany,4-2-3-1,LB,David Raum,Defender,Left-back,Medium,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+Germany,4-2-3-1,DM,Toni Kroos,Midfielder,Controller,Low,fan_expected_xi_not_official,2026-05-22,Only if available/selected.
+Germany,4-2-3-1,CM,İlkay Gündoğan,Midfielder,Midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Senior option.
+Germany,4-2-3-1,RW,Leroy Sané,Forward,Winger,Medium,fan_expected_xi_not_official,2026-05-22,Wide slot can vary.
+Germany,4-2-3-1,AM,Jamal Musiala,Midfielder,Creator,High,fan_expected_xi_not_official,2026-05-22,Key creator.
+Germany,4-2-3-1,LW,Florian Wirtz,Midfielder,Creator,High,fan_expected_xi_not_official,2026-05-22,Key creator.
+Germany,4-2-3-1,ST,Kai Havertz,Forward,Forward,Medium,fan_expected_xi_not_official,2026-05-22,Forward slot can vary.
+Netherlands,4-3-3,GK,Bart Verbruggen,Goalkeeper,Goalkeeper,Medium,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+Netherlands,4-3-3,RB,Denzel Dumfries,Defender,Right-back,High,fan_expected_xi_not_official,2026-05-22,Key wing-back/full-back.
+Netherlands,4-3-3,CB,Virgil van Dijk,Defender,Centre-back,High,fan_expected_xi_not_official,2026-05-22,Defensive leader.
+Netherlands,4-3-3,CB,Matthijs de Ligt,Defender,Centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Centre-back slot can vary.
+Netherlands,4-3-3,LB,Nathan Aké,Defender,Left-back / centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Defensive option.
+Netherlands,4-3-3,DM,Frenkie de Jong,Midfielder,Controller,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+Netherlands,4-3-3,CM,Xavi Simons,Midfielder,Creator,High,fan_expected_xi_not_official,2026-05-22,Key creator.
+Netherlands,4-3-3,CM,Tijjani Reijnders,Midfielder,Central midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Midfield slot can vary.
+Netherlands,4-3-3,RW,Cody Gakpo,Forward,Forward / winger,High,fan_expected_xi_not_official,2026-05-22,Key forward.
+Netherlands,4-3-3,ST,Memphis Depay,Forward,Forward,Medium,fan_expected_xi_not_official,2026-05-22,Forward slot can vary.
+Netherlands,4-3-3,LW,Donyell Malen,Forward,Winger,Medium,fan_expected_xi_not_official,2026-05-22,Wide slot can vary.
+Uruguay,4-3-3,GK,Sergio Rochet,Goalkeeper,Goalkeeper,Medium,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+Uruguay,4-3-3,RB,Nahitan Nández,Midfielder,Right-back / midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Role can vary.
+Uruguay,4-3-3,CB,Ronald Araújo,Defender,Centre-back,High,fan_expected_xi_not_official,2026-05-22,Key defender.
+Uruguay,4-3-3,CB,José María Giménez,Defender,Centre-back,High,fan_expected_xi_not_official,2026-05-22,Key defender.
+Uruguay,4-3-3,LB,Mathías Olivera,Defender,Left-back,Medium,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+Uruguay,4-3-3,DM,Manuel Ugarte,Midfielder,Defensive midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+Uruguay,4-3-3,CM,Federico Valverde,Midfielder,Box-to-box midfielder,High,fan_expected_xi_not_official,2026-05-22,Headline midfielder.
+Uruguay,4-3-3,CM,Rodrigo Bentancur,Midfielder,Central midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Midfield slot can vary.
+Uruguay,4-3-3,RW,Facundo Pellistri,Forward,Winger,Medium,fan_expected_xi_not_official,2026-05-22,Wide slot can vary.
+Uruguay,4-3-3,ST,Darwin Núñez,Forward,Striker,High,fan_expected_xi_not_official,2026-05-22,Key striker.
+Uruguay,4-3-3,LW,Maximiliano Araújo,Forward,Winger,Medium,fan_expected_xi_not_official,2026-05-22,Wide slot can vary.
+Croatia,4-3-3,GK,Dominik Livaković,Goalkeeper,Goalkeeper,High,fan_expected_xi_not_official,2026-05-22,Key goalkeeper.
+Croatia,4-3-3,RB,Josip Stanišić,Defender,Right-back,Medium,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+Croatia,4-3-3,CB,Joško Gvardiol,Defender,Centre-back / left-back,High,fan_expected_xi_not_official,2026-05-22,Key defender.
+Croatia,4-3-3,CB,Martin Erlić,Defender,Centre-back,Low,fan_expected_xi_not_official,2026-05-22,Centre-back slot uncertain.
+Croatia,4-3-3,LB,Borna Sosa,Defender,Left-back,Medium,fan_expected_xi_not_official,2026-05-22,Curated fan expectation.
+Croatia,4-3-3,CM,Luka Modrić,Midfielder,Controller,High,fan_expected_xi_not_official,2026-05-22,Senior creator.
+Croatia,4-3-3,CM,Mateo Kovačić,Midfielder,Central midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+Croatia,4-3-3,CM,Marcelo Brozović,Midfielder,Defensive midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Senior option.
+Croatia,4-3-3,RW,Lovro Majer,Midfielder,Creator,Medium,fan_expected_xi_not_official,2026-05-22,Attacking slot can vary.
+Croatia,4-3-3,ST,Ante Budimir,Forward,Striker,Medium,fan_expected_xi_not_official,2026-05-22,Forward option.
+Croatia,4-3-3,LW,Ivan Perišić,Forward,Wide player,Medium,fan_expected_xi_not_official,2026-05-22,Senior wide option.
+Morocco,4-3-3,GK,Yassine Bounou,Goalkeeper,Goalkeeper,High,fan_expected_xi_not_official,2026-05-22,Key goalkeeper.
+Morocco,4-3-3,RB,Achraf Hakimi,Defender,Right-back,High,fan_expected_xi_not_official,2026-05-22,Headline full-back.
+Morocco,4-3-3,CB,Nayef Aguerd,Defender,Centre-back,High,fan_expected_xi_not_official,2026-05-22,Key defender.
+Morocco,4-3-3,CB,Romain Saïss,Defender,Centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Senior defender.
+Morocco,4-3-3,LB,Noussair Mazraoui,Defender,Full-back,High,fan_expected_xi_not_official,2026-05-22,Key full-back.
+Morocco,4-3-3,DM,Sofyan Amrabat,Midfielder,Defensive midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+Morocco,4-3-3,CM,Azzedine Ounahi,Midfielder,Central midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+Morocco,4-3-3,AM,Hakim Ziyech,Forward,Creator,Medium,fan_expected_xi_not_official,2026-05-22,Role/selection can vary.
+Morocco,4-3-3,RW,Amine Adli,Forward,Winger,Medium,fan_expected_xi_not_official,2026-05-22,Wide option.
+Morocco,4-3-3,ST,Youssef En-Nesyri,Forward,Striker,High,fan_expected_xi_not_official,2026-05-22,Key striker.
+Morocco,4-3-3,LW,Abde Ezzalzouli,Forward,Winger,Medium,fan_expected_xi_not_official,2026-05-22,Wide option.
+USA,4-3-3,GK,Matt Turner,Goalkeeper,Goalkeeper,Medium,fan_expected_xi_not_official,2026-05-22,Goalkeeper slot can vary.
+USA,4-3-3,RB,Sergiño Dest,Defender,Right-back,Medium,fan_expected_xi_not_official,2026-05-22,Fitness/selection dependent.
+USA,4-3-3,CB,Chris Richards,Defender,Centre-back,High,fan_expected_xi_not_official,2026-05-22,Key defender.
+USA,4-3-3,CB,Tim Ream,Defender,Centre-back,Medium,fan_expected_xi_not_official,2026-05-22,Senior defender.
+USA,4-3-3,LB,Antonee Robinson,Defender,Left-back,High,fan_expected_xi_not_official,2026-05-22,Key full-back.
+USA,4-3-3,DM,Tyler Adams,Midfielder,Defensive midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Fitness/selection dependent.
+USA,4-3-3,CM,Weston McKennie,Midfielder,Box-to-box midfielder,High,fan_expected_xi_not_official,2026-05-22,Key midfielder.
+USA,4-3-3,CM,Yunus Musah,Midfielder,Central midfielder,Medium,fan_expected_xi_not_official,2026-05-22,Midfield option.
+USA,4-3-3,RW,Tim Weah,Forward,Winger,Medium,fan_expected_xi_not_official,2026-05-22,Wide option.
+USA,4-3-3,ST,Folarin Balogun,Forward,Striker,Medium,fan_expected_xi_not_official,2026-05-22,Forward slot can vary.
+USA,4-3-3,LW,Christian Pulisic,Forward,Winger,High,fan_expected_xi_not_official,2026-05-22,Headline attacker.

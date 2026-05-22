@@ -1,0 +1,121 @@
+canonical_country,alias,fifa_code,group_letter
+Mexico,Mexico,MEX,A
+Mexico,MEX,MEX,A
+South Africa,South Africa,RSA,A
+South Africa,RSA,RSA,A
+South Korea,South Korea,KOR,A
+South Korea,Korea Republic,KOR,A
+South Korea,Republic of Korea,KOR,A
+South Korea,KOR,KOR,A
+Czechia,Czechia,CZE,A
+Czechia,Czech Republic,CZE,A
+Czechia,CZE,CZE,A
+Canada,Canada,CAN,B
+Canada,CAN,CAN,B
+Bosnia and Herzegovina,Bosnia and Herzegovina,BIH,B
+Bosnia and Herzegovina,Bosnia-Herzegovina,BIH,B
+Bosnia and Herzegovina,Bosnia & Herzegovina,BIH,B
+Bosnia and Herzegovina,Bosnia,BIH,B
+Bosnia and Herzegovina,BIH,BIH,B
+Qatar,Qatar,QAT,B
+Qatar,QAT,QAT,B
+Switzerland,Switzerland,SUI,B
+Switzerland,Swiss,SUI,B
+Switzerland,SUI,SUI,B
+Brazil,Brazil,BRA,C
+Brazil,Brasil,BRA,C
+Brazil,BRA,BRA,C
+Morocco,Morocco,MAR,C
+Morocco,MAR,MAR,C
+Haiti,Haiti,HAI,C
+Haiti,HAI,HAI,C
+Scotland,Scotland,SCO,C
+Scotland,SCO,SCO,C
+United States,United States,USA,D
+United States,USA,USA,D
+United States,United States of America,USA,D
+United States,USMNT,USA,D
+Paraguay,Paraguay,PAR,D
+Paraguay,PAR,PAR,D
+Australia,Australia,AUS,D
+Australia,AUS,AUS,D
+Türkiye,Türkiye,TUR,D
+Türkiye,Turkey,TUR,D
+Türkiye,Turkiye,TUR,D
+Türkiye,TUR,TUR,D
+Germany,Germany,GER,E
+Germany,Deutschland,GER,E
+Germany,GER,GER,E
+Curaçao,Curaçao,CUR,E
+Curaçao,Curacao,CUR,E
+Curaçao,CUR,CUR,E
+Côte d'Ivoire,Côte d'Ivoire,CIV,E
+Côte d'Ivoire,Cote d'Ivoire,CIV,E
+Côte d'Ivoire,Ivory Coast,CIV,E
+Côte d'Ivoire,CIV,CIV,E
+Ecuador,Ecuador,ECU,E
+Ecuador,ECU,ECU,E
+Netherlands,Netherlands,NED,F
+Netherlands,Holland,NED,F
+Netherlands,Dutch,NED,F
+Netherlands,NED,NED,F
+Japan,Japan,JPN,F
+Japan,JPN,JPN,F
+Sweden,Sweden,SWE,F
+Sweden,SWE,SWE,F
+Tunisia,Tunisia,TUN,F
+Tunisia,TUN,TUN,F
+Belgium,Belgium,BEL,G
+Belgium,BEL,BEL,G
+Egypt,Egypt,EGY,G
+Egypt,EGY,EGY,G
+IR Iran,IR Iran,IRN,G
+IR Iran,Iran,IRN,G
+IR Iran,Islamic Republic of Iran,IRN,G
+IR Iran,IRN,IRN,G
+New Zealand,New Zealand,NZL,G
+New Zealand,NZL,NZL,G
+Spain,Spain,ESP,H
+Spain,ESP,ESP,H
+Cabo Verde,Cabo Verde,CPV,H
+Cabo Verde,Cape Verde,CPV,H
+Cabo Verde,CPV,CPV,H
+Saudi Arabia,Saudi Arabia,KSA,H
+Saudi Arabia,KSA,KSA,H
+Uruguay,Uruguay,URU,H
+Uruguay,URU,URU,H
+France,France,FRA,I
+France,FRA,FRA,I
+Senegal,Senegal,SEN,I
+Senegal,SEN,SEN,I
+Iraq,Iraq,IRQ,I
+Iraq,IRQ,IRQ,I
+Norway,Norway,NOR,I
+Norway,NOR,NOR,I
+Argentina,Argentina,ARG,J
+Argentina,ARG,ARG,J
+Algeria,Algeria,ALG,J
+Algeria,ALG,ALG,J
+Austria,Austria,AUT,J
+Austria,AUT,AUT,J
+Jordan,Jordan,JOR,J
+Jordan,JOR,JOR,J
+Portugal,Portugal,POR,K
+Portugal,POR,POR,K
+Congo DR,Congo DR,COD,K
+Congo DR,DR Congo,COD,K
+Congo DR,Democratic Republic of the Congo,COD,K
+Congo DR,Congo Democratic Republic,COD,K
+Congo DR,COD,COD,K
+Uzbekistan,Uzbekistan,UZB,K
+Uzbekistan,UZB,UZB,K
+Colombia,Colombia,COL,K
+Colombia,COL,COL,K
+England,England,ENG,L
+England,ENG,ENG,L
+Croatia,Croatia,CRO,L
+Croatia,CRO,CRO,L
+Ghana,Ghana,GHA,L
+Ghana,GHA,GHA,L
+Panama,Panama,PAN,L
+Panama,PAN,PAN,L
