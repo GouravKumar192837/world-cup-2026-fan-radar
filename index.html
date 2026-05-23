@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=ui-polish">
 </head>
 <body>
   <div id="loader" class="loading-screen">
@@ -84,19 +84,20 @@
         <select id="countrySelect"></select>
       </div>
       <div class="filters">
-        <select id="countryView">
+        <select id="countryView" oninput="window.dispatchEvent(new Event('fanRadarCountryViewChange'))" onchange="window.dispatchEvent(new Event('fanRadarCountryViewChange'))">
           <option value="overview">Overview</option>
-          <option value="xi">Expected XI</option>
+          <option value="xi">Expected Playing XI</option>
           <option value="key">Key Players</option>
           <option value="stats">Stats Lens</option>
         </select>
-        <button id="resetCountry" class="ghost-btn">Reset Page</button>
-        <button id="clearCountryFilters" class="ghost-btn">Clear Filters</button>
+        <button id="resetCountry" class="ghost-btn">Reset Country</button>
+        <button id="clearCountryFilters" class="ghost-btn hidden">Clear Filters</button>
       </div>
       <div class="country-guide-layout">
         <div>
-          <h3>Country Guide <span class="not-official">not official squad</span></h3>
-          <input id="countryPlayerSearch" type="search" placeholder="Search Stats Lens">
+          <h3>Country Guide <span id="countryGuideBadge" class="not-official"></span></h3>
+          <div id="countrySquadNote" class="compact-item hidden"></div>
+          <input id="countryPlayerSearch" class="hidden" type="search" placeholder="Search Stats Lens">
           <div id="shortlist" class="shortlist"></div>
           <div id="countryPlayerTable" class="table-card"></div>
         </div>
@@ -111,7 +112,7 @@
           <p>Browse the curated player guide, open the Stats Lens, or compare two similar-role players.</p>
         </div>
       </div>
-      <div class="filters">
+      <div id="playerFilters" class="filters hidden">
         <input id="playerSearch" type="search" placeholder="Search player">
         <select id="nationalityFilter"><option value="">All nationalities</option></select>
         <select id="clubFilter"><option value="">All clubs</option></select>
@@ -123,17 +124,18 @@
           <option value="prime">23-29</option>
           <option value="veteran">30+</option>
         </select>
-        <label class="range-label">Min minutes <input id="minutesFilter" type="range" min="0" max="2500" step="100" value="600"><span id="minutesValue">600</span></label>
         <button id="resetPlayers" class="ghost-btn">Reset Page</button>
         <button id="clearPlayerFilters" class="ghost-btn">Clear Filters</button>
       </div>
+      <div id="playerModeNote" class="player-mode-note"></div>
+      <div id="playerSearchNote" class="player-search-note hidden"></div>
       <div class="watch-tabs">
         <button class="pill active" data-list="key">Key Players</button>
         <button class="pill" data-list="stats">Stats Lens</button>
         <button class="pill" data-list="comparison">Comparison</button>
       </div>
       <div id="playerTable" class="table-card"></div>
-      <div class="comparison-card">
+      <div id="comparisonCard" class="comparison-card hidden">
         <div class="section-head compact">
           <div>
             <h3>Player Radar Comparison</h3>
@@ -157,8 +159,7 @@
         <select id="clubWatchSelect"></select>
       </div>
       <div class="filters">
-        <button id="resetClub" class="ghost-btn">Reset Page</button>
-        <button id="clearClubFilters" class="ghost-btn">Clear Filters</button>
+        <button id="resetClub" class="ghost-btn">Reset Club</button>
       </div>
       <div id="clubSummary" class="score-grid interactive-grid"></div>
       <div class="country-layout bottom">
@@ -173,7 +174,9 @@
       </div>
       <div class="filters">
         <input id="clubSearch" type="search" placeholder="Search club players">
+        <button id="clearClubFilters" class="ghost-btn">Clear Search</button>
       </div>
+      <div id="clubStatusLegend" class="player-mode-note"></div>
       <div id="clubTable" class="table-card"></div>
       <section class="details-card" open>
         <h3>World Cup Matchup Watch</h3>
@@ -181,7 +184,7 @@
       </section>
       <details id="playersNotShown" class="details-card">
         <summary>Players not shown</summary>
-        <p>These club players are outside the finalized qualified-country pool or could not be matched to a qualified team.</p>
+        <p>Shown here only when a player’s country has not qualified, or when that country has a captured squad and the player is not in the reported squad.</p>
         <div id="notShownList" class="compact-list"></div>
       </details>
     </section>
@@ -198,7 +201,7 @@
         <select id="plannerTeam"><option value="">All teams</option></select>
         <input id="plannerDate" type="date">
         <select id="plannerStage"><option value="">All stages</option></select>
-        <select id="watchabilityFilter">
+        <select id="watchabilityFilter" class="hidden" aria-hidden="true">
           <option value="">All watch windows</option>
           <option value="Prime Time">Prime Time</option>
           <option value="Late Night">Late Night</option>
@@ -214,7 +217,8 @@
           <option value="hype">Sort by Neutral Watch Score</option>
           <option value="window">Sort by watch window</option>
         </select>
-        <label class="switch"><input id="plannerClubLens" type="checkbox"><span></span> Club lens</label>
+        <label class="select-label club-lens-control">Club lens <select id="plannerClubSelect"><option value="">Choose a club</option></select></label>
+        <label class="switch"><input id="plannerClubLens" type="checkbox" disabled><span></span> Apply club lens</label>
         <button id="resetPlanner" class="ghost-btn">Reset Page</button>
         <button id="clearPlannerFilters" class="ghost-btn">Clear Filters</button>
         <button id="showAllPlanner" class="ghost-btn">Show All Matches</button>
@@ -225,6 +229,6 @@
     </section>
   </main>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=xi-render-fix-7"></script>
 </body>
 </html>

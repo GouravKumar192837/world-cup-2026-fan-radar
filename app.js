@@ -16,7 +16,9 @@ const DATA = {
   teamProfiles: "data/team_hype_profiles.csv",
   scoringRules: "data/match_hype_scoring_rules.csv",
   rivalryOverrides: "data/match_rivalry_overrides.csv",
-  usagePolicy: "data/data_usage_policy_v3.csv"
+  usagePolicy: "data/data_usage_policy_v3.csv",
+  playerRegistry: "data/worldcup_player_registry_v1.csv",
+  squadStatus: "data/squad_collection_status_v1.csv"
 };
 
 const state = {
@@ -29,10 +31,12 @@ const state = {
   matchStorylines: new Map(),
   expectedXi: new Map(),
   clubMatchups: new Map(),
+  playerRegistry: new Map(),
+  squadStatus: new Map(),
   selectedXiPlayer: null,
   xiShowList: false,
   xiShowRoles: true,
-  xiShowClubs: true,
+  xiShowClubs: false,
   missingV3: [],
   teams: new Map(),
   cities: new Map(),
@@ -49,6 +53,7 @@ const state = {
   playerSort: { key: "overall", dir: "desc" },
   clubSort: { key: "overall", dir: "desc" },
   countrySort: { key: "overall", dir: "desc" },
+  countryUiSignature: "",
   plannerSort: { key: "date", dir: "asc" },
   plannerLimit: 24,
   highFormThreshold: 60,
@@ -114,11 +119,15 @@ function normalizePlayerName(name = "") {
   return Object.entries(aliases).find(([, names]) => names.includes(cleaned))?.[0] || cleaned;
 }
 
+function normalizeClubName(name = "") {
+  return normalizePlayerName(name).replace(/\b(fc|cf|sc|club)\b/g, "").replace(/\s+/g, " ").trim();
+}
+
 boot();
 
 async function boot() {
   try {
-    const [matches, teams, cities, stages, players, countryMap, freshness, keyPlayersV3, keyPlayersV4, countryStories, matchStorylines, expectedXi, clubMatchups, displayPolicy, teamProfiles, scoringRules, rivalryOverrides, usagePolicy] = await Promise.all([
+    const [matches, teams, cities, stages, players, countryMap, freshness, keyPlayersV3, keyPlayersV4, countryStories, matchStorylines, expectedXi, clubMatchups, displayPolicy, teamProfiles, scoringRules, rivalryOverrides, usagePolicy, playerRegistry, squadStatus] = await Promise.all([
       loadCsv(DATA.matches),
       loadCsv(DATA.teams),
       loadCsv(DATA.cities),
@@ -136,15 +145,18 @@ async function boot() {
       loadOptionalCsv(DATA.teamProfiles, "team hype guide"),
       loadOptionalCsv(DATA.scoringRules, "hype scoring guide"),
       loadOptionalCsv(DATA.rivalryOverrides, "rivalry guide"),
-      loadOptionalCsv(DATA.usagePolicy, "data policy")
+      loadOptionalCsv(DATA.usagePolicy, "data policy"),
+      loadOptionalCsv(DATA.playerRegistry, "player registry"),
+      loadOptionalCsv(DATA.squadStatus, "squad status")
     ]);
     const keyPlayers = keyPlayersV4.length ? keyPlayersV4 : keyPlayersV3;
-    state.rows = { matches, teams, cities, stages, players, countryMap, freshness, keyPlayers, countryStories, matchStorylines, expectedXi, clubMatchups, displayPolicy, teamProfiles, scoringRules, rivalryOverrides, usagePolicy };
+    state.rows = { matches, teams, cities, stages, players, countryMap, freshness, keyPlayers, countryStories, matchStorylines, expectedXi, clubMatchups, displayPolicy, teamProfiles, scoringRules, rivalryOverrides, usagePolicy, playerRegistry, squadStatus };
     buildCountryAliases(countryMap);
     teams.forEach((t) => state.teams.set(t.id, { ...t, real: isRealTeam(t) }));
     cities.forEach((c) => state.cities.set(c.id, c));
     stages.forEach((s) => state.stages.set(s.id, s));
     buildPlayers(players);
+    buildEligibilityLayers(playerRegistry, squadStatus);
     buildV3HypeLayers(keyPlayers, teamProfiles, rivalryOverrides);
     buildV4GuideLayers(countryStories, matchStorylines, expectedXi, clubMatchups);
     buildCountries();
@@ -293,11 +305,12 @@ function buildV4GuideLayers(countryRows, storylineRows, xiRows, matchupRows) {
     if (!code) return;
     if (!state.expectedXi.has(code)) state.expectedXi.set(code, []);
     state.expectedXi.get(code).push({
-      name: pick(r, ["player_name", "display_name"]),
+      name: repairPlayerDisplayName(pick(r, ["player_name", "display_name"])),
+      club: pick(r, ["club"]),
       slot: pick(r, ["position_slot"]),
       group: pick(r, ["position_group"]),
       role: pick(r, ["role_description"]),
-      formation: pick(r, ["formation"]),
+      formation: normalizeFormation(pick(r, ["formation"])),
       confidence: pick(r, ["confidence"]),
       notes: pick(r, ["notes"])
     });
@@ -317,6 +330,85 @@ function buildV4GuideLayers(countryRows, storylineRows, xiRows, matchupRows) {
       confidence: pick(r, ["confidence"])
     });
   });
+}
+
+function buildEligibilityLayers(registryRows, statusRows) {
+  statusRows.forEach((r) => {
+    const code = normalizeCountryCode("", pick(r, ["registry_country_name", "country"]));
+    if (!code) return;
+    const status = pick(r, ["squad_collection_status"]);
+    state.squadStatus.set(code, { status, pending: /pending|not captured/i.test(status) });
+  });
+  registryRows.forEach((r) => {
+    const code = normalizeCountryCode("", pick(r, ["country"]));
+    if (!code) return;
+    const row = {
+      name: pick(r, ["player_name"]),
+      nameKey: normalizePlayerName(pick(r, ["player_name"])),
+      club: pick(r, ["club"]),
+      clubKey: normalizeClubName(pick(r, ["club"])),
+      positionGroup: pick(r, ["position_group"]),
+      countryCode: code,
+      include: /^true$/i.test(pick(r, ["include_in_worldcup_app"])),
+      status: pick(r, ["squad_status"])
+    };
+    if (!state.playerRegistry.has(code)) state.playerRegistry.set(code, []);
+    state.playerRegistry.get(code).push(row);
+  });
+}
+
+function countrySquadPending(code) {
+  const status = state.squadStatus.get(code);
+  return !status || status.pending;
+}
+
+function registryMatch(playerName, country, club = "") {
+  const code = /^[A-Z]{3}$/.test(String(country)) ? String(country) : normalizeCountryCode("", country);
+  const nameKey = normalizePlayerName(playerName);
+  const clubKey = normalizeClubName(club);
+  const rows = (state.playerRegistry.get(code) || []).filter((r) => r.nameKey === nameKey);
+  if (!rows.length) return null;
+  return [...rows].sort((a, b) => (b.clubKey === clubKey) - (a.clubKey === clubKey))[0];
+}
+
+function isWorldCupEligiblePlayer(playerName, country, club = "") {
+  return Boolean(registryMatch(playerName, country, club)?.include);
+}
+
+function playerEligibility(playerName, country, club = "") {
+  const code = /^[A-Z]{3}$/.test(String(country)) ? String(country) : normalizeCountryCode("", country);
+  const match = registryMatch(playerName, code, club);
+  if (match?.include) return { eligible: true, pending: false, label: "" };
+  if (countrySquadOpen(code)) return { eligible: false, pending: true, label: "squad not confirmed" };
+  return { eligible: false, pending: false, label: "not in reported squad" };
+}
+
+function keyPlayersForDisplay(code) {
+  return keyPlayersFor(code).filter((p) => {
+    const status = playerEligibility(p.name, code, p.club);
+    p.eligibilityLabel = status.label;
+    return status.eligible || status.pending;
+  });
+}
+
+function eligibleKeyPlayersFor(code) {
+  return keyPlayersFor(code).filter((p) => isWorldCupEligiblePlayer(p.name, code, p.club));
+}
+
+function repairPlayerDisplayName(name = "") {
+  return String(name)
+    .replace(/Ã‰der MilitÃ£o/g, "Éder Militão")
+    .replace(/Lucas PaquetÃ¡/g, "Lucas Paquetá")
+    .replace(/VinÃ­cius JÃºnior/g, "Vinícius Júnior");
+}
+
+function normalizeFormation(value = "") {
+  const text = String(value).trim();
+  const parts = text.match(/\d+/g);
+  if (!parts?.length) return text || "Fan XI";
+  if (/^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}$/.test(text)) return `${Number(parts[0])}-${Number(parts[1])}-${Number(parts[2].slice(-1))}`;
+  const normalized = parts.map((p) => Number(p)).filter(Boolean).join("-");
+  return normalized || text || "Fan XI";
 }
 
 function tierRank(tier = "") {
@@ -569,8 +661,8 @@ function scoreMatch(match) {
   const combinedStrength = avg([p1.quality, p2.quality]);
   const depth = avg([p1.depth, p2.depth]);
   const balance = 100 - Math.abs((p1.quality ?? 50) - (p2.quality ?? 50));
-  const keyA = keyPlayersFor(match.homeCode);
-  const keyB = keyPlayersFor(match.awayCode);
+  const keyA = keyPlayersForDisplay(match.homeCode);
+  const keyB = keyPlayersForDisplay(match.awayCode);
   const starInputs = [keyA.length ? avg(keyA.slice(0, 5).map((p) => p.star)) : null, keyB.length ? avg(keyB.slice(0, 5).map((p) => p.star)) : null, p1.starPower, p2.starPower].filter(Number.isFinite);
   const starPower = starInputs.length ? avg(starInputs) : null;
   const highForm = keyA.slice(0, 6).length + keyB.slice(0, 6).length;
@@ -617,9 +709,9 @@ function rivalry(a, b) {
 
 function activeClubPlayers(match) {
   if (!state.activeClub) return [];
-  const curated = [...keyPlayersFor(match.homeCode), ...keyPlayersFor(match.awayCode)].filter((p) => p.club === state.activeClub);
+  const curated = [...eligibleKeyPlayersFor(match.homeCode), ...eligibleKeyPlayersFor(match.awayCode)].filter((p) => p.club === state.activeClub);
   if (curated.length) return curated;
-  return state.worldCupPlayerPool.filter((p) => p.club === state.activeClub && (p.code === match.homeCode || p.code === match.awayCode)).slice(0, 2);
+  return state.worldCupPlayerPool.filter((p) => p.club === state.activeClub && (p.code === match.homeCode || p.code === match.awayCode) && isWorldCupEligiblePlayer(p.name, p.code, p.club)).slice(0, 2);
 }
 
 function clubInvolvementScore(match, clubPlayers) {
@@ -643,8 +735,14 @@ function clubRelevanceWeight(label) {
 function naturalReason(s) {
   const curated = state.matchStorylines.get(`match:${s.match.match_number}`) || state.matchStorylines.get([s.match.homeCode, s.match.awayCode].sort().join("-"));
   if (curated?.summary) {
-    const clubText = s.clubBoost ? `${state.activeClub} involvement adds an extra fan angle.` : "Choose a favourite club to add a supporter lens.";
-    return `${curated.summary} ${clubText} ${s.match.window}${s.match.ist.weekend ? " weekend" : ""} watch in India.`;
+    const excluded = [...keyPlayersFor(s.match.homeCode), ...keyPlayersFor(s.match.awayCode)].some((p) => {
+      const status = playerEligibility(p.name, p.countryCode, p.club);
+      return !status.eligible && !status.pending && curated.summary.includes(p.name);
+    });
+    if (!excluded) {
+      const clubText = s.clubBoost ? `${state.activeClub} involvement adds an extra fan angle.` : "Choose a favourite club to add a supporter lens.";
+      return `${curated.summary} ${clubText} ${s.match.window}${s.match.ist.weekend ? " weekend" : ""} watch in India.`;
+    }
   }
   const a = headlinePlayers(s.keyA).join(", ");
   const b = headlinePlayers(s.keyB).join(", ");
@@ -660,7 +758,7 @@ function naturalReason(s) {
 
 function headlinePlayers(players) {
   const outfield = players.filter((p) => !/goalkeeper/i.test(`${p.role} ${p.roleGroup} ${p.subRole}`) || String(p.avoidGk).toLowerCase() === "false");
-  return (outfield.length ? outfield : players).slice(0, 3).map((p) => p.name);
+  return (outfield.length ? outfield : players).slice(0, 3).map((p) => p.eligibilityLabel ? `${p.name} (${p.eligibilityLabel})` : p.name);
 }
 
 function preferredClub() {
@@ -679,23 +777,31 @@ function wireUi() {
   $("clubLensToggle").addEventListener("input", () => { state.prioritizeClubLens = $("clubLensToggle").checked; renderMatches(); });
   $("countrySelect").addEventListener("change", renderCountry);
   $("countryView").addEventListener("input", renderCountry);
+  $("countryView").addEventListener("change", renderCountry);
+  window.renderCountry = renderCountry;
+  setInterval(() => {
+    if (!$("countries")?.classList.contains("active")) return;
+    const signature = `${$("countrySelect").value}|${$("countryView").value}|${$("countryPlayerSearch").value}`;
+    if (signature !== state.countryUiSignature) renderCountry();
+  }, 250);
   $("countryPlayerSearch").addEventListener("input", renderCountry);
   $("clubSearch").addEventListener("input", renderClub);
-  ["playerSearch", "nationalityFilter", "clubFilter", "leagueFilter", "positionFilter", "ageFilter", "minutesFilter"].forEach((id) => $(id).addEventListener("input", () => { state.playerPage = 1; $("minutesValue").textContent = $("minutesFilter").value; renderPlayers(); }));
+  ["playerSearch", "nationalityFilter", "clubFilter", "leagueFilter", "positionFilter", "ageFilter"].forEach((id) => $(id).addEventListener("input", () => { state.playerPage = 1; renderPlayers(); }));
   document.querySelectorAll(".pill").forEach((btn) => btn.addEventListener("click", () => { document.querySelectorAll(".pill").forEach((p) => p.classList.remove("active")); btn.classList.add("active"); state.playerList = btn.dataset.list; state.playerPage = 1; renderPlayers(); }));
   ["plannerTeam", "plannerDate", "plannerStage", "watchabilityFilter", "plannerSearch", "plannerSortSelect", "plannerClubLens"].forEach((id) => $(id).addEventListener("input", () => { state.plannerLimit = 24; renderPlanner(); }));
-  $("clearPlannerFilters").addEventListener("click", () => { ["plannerTeam", "plannerDate", "plannerStage", "watchabilityFilter", "plannerSearch"].forEach((id) => $(id).value = ""); $("plannerClubLens").checked = false; state.plannerLimit = 24; renderPlanner(); });
-  $("showAllPlanner").addEventListener("click", () => { ["plannerTeam", "plannerDate", "plannerStage", "watchabilityFilter", "plannerSearch"].forEach((id) => $(id).value = ""); $("plannerClubLens").checked = false; $("plannerSortSelect").value = "date"; state.plannerSort = { key: "date", dir: "asc" }; state.plannerLimit = state.matches.length; renderPlanner(); });
+  $("plannerClubSelect").addEventListener("input", () => { $("plannerClubLens").disabled = !$("plannerClubSelect").value; $("plannerClubLens").checked = Boolean($("plannerClubSelect").value); applyClubTheme($("plannerClubSelect").value || state.activeClub || state.clubWatchClub); state.plannerLimit = 24; renderPlanner(); });
+  $("clearPlannerFilters").addEventListener("click", () => { ["plannerTeam", "plannerDate", "plannerStage", "watchabilityFilter", "plannerSearch", "plannerClubSelect"].forEach((id) => $(id).value = ""); $("plannerClubLens").checked = false; $("plannerClubLens").disabled = true; state.plannerLimit = 24; renderPlanner(); });
+  $("showAllPlanner").addEventListener("click", () => { ["plannerTeam", "plannerDate", "plannerStage", "watchabilityFilter", "plannerSearch", "plannerClubSelect"].forEach((id) => $(id).value = ""); $("plannerClubLens").checked = false; $("plannerClubLens").disabled = true; $("plannerSortSelect").value = "date"; state.plannerSort = { key: "date", dir: "asc" }; state.plannerLimit = state.matches.length; renderPlanner(); });
   $("clearCompare").addEventListener("click", () => { state.compare.clear(); renderPlayers(); renderClub(); renderRadar(); });
   $("resetMatches").addEventListener("click", () => { state.activeClub = ""; $("hypeClubSelect").value = ""; state.playerSort = { key: "overall", dir: "desc" }; applyClubTheme(); renderMatches(); renderPlanner(); });
   $("clearMatchFilters").addEventListener("click", () => { state.activeClub = ""; $("hypeClubSelect").value = ""; applyClubTheme(); renderMatches(); renderPlanner(); });
   $("resetCountry").addEventListener("click", () => { $("countrySelect").selectedIndex = 0; $("countryView").value = "overview"; $("countryPlayerSearch").value = ""; state.countrySort = { key: "overall", dir: "desc" }; renderCountry(); });
   $("clearCountryFilters").addEventListener("click", () => { $("countryPlayerSearch").value = ""; renderCountry(); });
-  $("resetPlayers").addEventListener("click", () => { ["playerSearch", "nationalityFilter", "clubFilter", "leagueFilter", "positionFilter", "ageFilter"].forEach((id) => $(id).value = ""); $("minutesFilter").value = 600; $("minutesValue").textContent = "600"; state.playerSort = { key: "overall", dir: "desc" }; state.compare.clear(); renderPlayers(); });
-  $("clearPlayerFilters").addEventListener("click", () => { ["playerSearch", "nationalityFilter", "clubFilter", "leagueFilter", "positionFilter", "ageFilter"].forEach((id) => $(id).value = ""); $("minutesFilter").value = 600; $("minutesValue").textContent = "600"; renderPlayers(); });
+  $("resetPlayers").addEventListener("click", () => { ["playerSearch", "nationalityFilter", "clubFilter", "leagueFilter", "positionFilter", "ageFilter"].forEach((id) => $(id).value = ""); state.playerSort = { key: "overall", dir: "desc" }; state.compare.clear(); renderPlayers(); });
+  $("clearPlayerFilters").addEventListener("click", () => { ["playerSearch", "nationalityFilter", "clubFilter", "leagueFilter", "positionFilter", "ageFilter"].forEach((id) => $(id).value = ""); renderPlayers(); });
   $("resetClub").addEventListener("click", () => { state.clubWatchClub = preferredClub(); $("clubWatchSelect").value = state.clubWatchClub; $("clubSearch").value = ""; state.clubSort = { key: "overall", dir: "desc" }; applyClubTheme(state.clubWatchClub); renderClub(); });
   $("clearClubFilters").addEventListener("click", () => { $("clubSearch").value = ""; renderClub(); });
-  $("resetPlanner").addEventListener("click", () => { ["plannerTeam", "plannerDate", "plannerStage", "watchabilityFilter", "plannerSearch"].forEach((id) => $(id).value = ""); $("plannerClubLens").checked = false; $("plannerSortSelect").value = "date"; state.plannerSort = { key: "date", dir: "asc" }; state.plannerLimit = 24; renderPlanner(); });
+  $("resetPlanner").addEventListener("click", () => { ["plannerTeam", "plannerDate", "plannerStage", "watchabilityFilter", "plannerSearch", "plannerClubSelect"].forEach((id) => $(id).value = ""); $("plannerClubLens").checked = false; $("plannerClubLens").disabled = true; $("plannerSortSelect").value = "date"; state.plannerSort = { key: "date", dir: "asc" }; state.plannerLimit = 24; renderPlanner(); });
 }
 
 function fillSelects() {
@@ -709,9 +815,11 @@ function fillSelects() {
     return `<option value="${code}">${esc(countryName(code))}</option>`;
   }).join("");
   $("plannerStage").innerHTML += state.rows.stages.map((s) => `<option value="${esc(s.stage_name)}">${esc(s.stage_name)}</option>`).join("");
-  const clubOpts = state.clubs.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  const clubNames = [...new Set([...state.clubs, ...[...state.keyPlayers.values()].flat().map((p) => p.club).filter(Boolean)])].sort((a, b) => a.localeCompare(b));
+  const clubOpts = clubNames.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
   $("hypeClubSelect").innerHTML = `<option value="">No favourite club lens</option>${clubOpts}`;
   $("clubWatchSelect").innerHTML = `<option value="">Choose a club</option>${clubOpts}`;
+  $("plannerClubSelect").innerHTML = `<option value="">Choose a club</option>${clubOpts}`;
   state.clubWatchClub = preferredClub();
   $("hypeClubSelect").value = state.activeClub;
   $("clubWatchSelect").value = state.clubWatchClub;
@@ -789,7 +897,8 @@ function renderHypeBars(id, matches) {
 }
 
 function scoreBar(score, title = "") {
-  return `<span class="hype-track" title="${esc(title)}"><span class="hype-fill ${hypeClass(score)}" style="--score:${clamp(score)}%"></span></span>`;
+  const [start, end] = scoreGradient(score);
+  return `<span class="hype-track" title="${esc(title)}"><span class="hype-fill ${hypeClass(score)}" style="--score:${clamp(score)}%;--bar-start:${start};--bar-end:${end};"></span></span>`;
 }
 
 function hypeClass(score) {
@@ -797,6 +906,17 @@ function hypeClass(score) {
   if (score < 60) return "moderate";
   if (score < 80) return "high";
   return "must";
+}
+
+function scoreGradient(score) {
+  if (score < 40) return ["#526273", "#8ba3bd"];
+  if (score < 60) return ["#16b98d", "#78f0c6"];
+  if (score < 80) {
+    const hue = Math.round(52 - (score - 60) * 1.45);
+    return [`hsl(${hue} 92% 56%)`, `hsl(${Math.max(18, hue - 12)} 95% 55%)`];
+  }
+  const hue = Math.round(344 - Math.min(18, score - 80));
+  return [`hsl(${hue} 95% 60%)`, "#ffe06a"];
 }
 
 function componentPill(label, value, max) {
@@ -812,9 +932,32 @@ function renderCountry() {
   const code = $("countrySelect").value || [...state.countries.keys()][0];
   const c = state.countries.get(code);
   if (!c) return;
-  $("shortlist").innerHTML = countryViewHtml(c);
-  if ($("countryView").value === "stats") {
-    const q = $("countryPlayerSearch").value.toLowerCase();
+  const view = $("countryView").value;
+  state.countryUiSignature = `${code}|${view}|${$("countryPlayerSearch").value}`;
+  const pending = countrySquadOpen(code);
+  const search = $("countryPlayerSearch");
+  $("countryGuideBadge").textContent = pending ? "Fan guide" : "Squad-based fan guide";
+  const xi = view === "xi" ? expectedPlayingXi(c) : null;
+  const note = view === "xi" && xi?.officialNotAnnounced
+    ? "Official squad not announced."
+    : view === "xi" && xi?.unavailable
+      ? "Expected Playing XI data unavailable for this team."
+      : view === "xi" && xi?.incomplete
+      ? "Expected Playing XI data incomplete."
+      : "";
+  $("countrySquadNote").textContent = note;
+  $("countrySquadNote").classList.toggle("hidden", !note);
+  search.classList.toggle("hidden", view !== "stats");
+  $("clearCountryFilters").classList.toggle("hidden", view !== "stats");
+  const rawCountryHtml = view === "overview"
+    ? countryOverviewHtml(c)
+    : view === "xi"
+      ? expectedXiHtml(c)
+      : countryViewHtml(c);
+  const countryHtml = stripCountryPlayerStatusLabels(rawCountryHtml);
+  $("shortlist").innerHTML = countryHtml;
+  if (view === "stats") {
+    const q = search.value.toLowerCase();
     renderSortableTable("countryPlayerTable", c.players.filter((p) => !q || `${p.name} ${p.club} ${p.pos}`.toLowerCase().includes(q)).slice(0, 80), state.countrySort, (sort) => state.countrySort = sort, false);
   } else {
     $("countryPlayerTable").innerHTML = "";
@@ -822,10 +965,17 @@ function renderCountry() {
   setTimeout(wireXiControls, 0);
 }
 
+function stripCountryPlayerStatusLabels(html) {
+  return html
+    .replace(/\s*[Â·|]\s*squad not confirmed/gi, "")
+    .replace(/\s*[Â·|]\s*not in reported squad/gi, "");
+}
+
 function wireXiControls() {
   document.querySelectorAll(".xi-marker").forEach((btn) => btn.addEventListener("click", () => {
     const code = $("countrySelect").value || [...state.countries.keys()][0];
-    state.selectedXiPlayer = (state.expectedXi.get(code) || []).find((p) => p.name === btn.dataset.xi) || null;
+    const c = state.countries.get(code);
+    state.selectedXiPlayer = (c ? expectedPlayingXi(c).players : []).find((p) => p.name === btn.dataset.xi) || null;
     renderCountry();
   }));
   const reset = $("resetXiSelection");
@@ -843,20 +993,21 @@ function countryViewHtml(c) {
   if (view === "overview") return countryOverviewHtml(c);
   if (view === "xi") return expectedXiHtml(c);
   if (view === "key") {
-    const keys = keyPlayersFor(c.code);
+    const keys = keyPlayersForDisplay(c.code);
     const groups = ["Goalkeeper", "Defender", "Midfielder", "Forward"].map((g) => {
       const list = keys.filter((p) => (p.position || p.roleGroup || p.role || "").includes(g) || (g === "Forward" && /winger|striker|forward/i.test(`${p.roleGroup} ${p.subRole}`)));
-      return `<div class="guide-card"><h3>${g}s</h3>${list.length ? list.map((p) => `<div class="short-item"><strong>${esc(p.name)}</strong><span>${esc(p.club || "Club not listed")} · ${esc(p.subRole || p.role || "Key player")} · Importance ${fmt(p.star / 10)}</span></div>`).join("") : `<p class="chart-note">No curated ${g.toLowerCase()}s listed yet.</p>`}</div>`;
+      return `<div class="guide-card"><h3>${g}s</h3>${list.length ? list.map((p) => `<div class="short-item"><strong>${esc(p.name)}</strong><span>${esc(p.club || "Club not listed")} · ${esc(p.subRole || p.role || "Key player")} · Importance ${fmt(p.star / 10)}${p.eligibilityLabel ? ` · ${esc(p.eligibilityLabel)}` : ""}</span></div>`).join("") : `<p class="chart-note">No curated ${g.toLowerCase()}s listed yet.</p>`}</div>`;
     }).join("");
-    return `<div class="compact-item"><strong>Key Players</strong><span>Curated player guide. These are not official squad selections.</span></div><div class="overview-grid">${groups}</div>`;
+    const guideText = countrySquadPending(c.code) ? "Curated player guide. Squad status is noted above." : "Squad-based fan guide.";
+    return `<div class="compact-item"><strong>Key Players</strong><span>${guideText}</span></div><div class="overview-grid">${groups}</div>`;
   }
   if (view === "hybrid") {
     const statsByName = new Map(c.players.map((p) => [p.name.toLowerCase(), p]));
-    const keys = keyPlayersFor(c.code);
+    const keys = keyPlayersForDisplay(c.code);
     return `<div class="compact-item"><strong>Hybrid View</strong><span>Curated key players first, with club-form stats attached where names match.</span></div>` +
       (keys.length ? keys.slice(0, 12).map((kp) => {
         const stat = statsByName.get(kp.name.toLowerCase());
-        return `<div class="short-item"><strong>${esc(kp.name)}</strong><span>${esc(kp.role || "Key player")} | ${esc(kp.club || "Club not listed")} ${stat ? `| Role Score ${fmt(stat.roleScore)} | Attack ${fmt(stat.attack)} | Creativity ${fmt(stat.creativity)}` : "| No matching stats row"}</span></div>`;
+        return `<div class="short-item"><strong>${esc(kp.name)}</strong><span>${esc(kp.role || "Key player")} | ${esc(kp.club || "Club not listed")} ${kp.eligibilityLabel ? `| ${esc(kp.eligibilityLabel)}` : ""} ${stat ? `| Role Score ${fmt(stat.roleScore)} | Attack ${fmt(stat.attack)} | Creativity ${fmt(stat.creativity)}` : "| No matching stats row"}</span></div>`;
       }).join("") : `<div class="compact-item">Key-player guide is not available for this country yet.</div>`);
   }
   const leaders = ["Goalkeeper", "Defender", "Midfielder", "Forward"].map((pos) => {
@@ -872,35 +1023,499 @@ function countryOverviewHtml(c) {
   const fixtures = state.matches.filter((m) => m.isFinalized && (m.homeCode === c.code || m.awayCode === c.code) && m.stage.stage_order === "1").slice(0, 3);
   return `<div class="overview-grid">
     <article class="guide-card hero-guide"><span class="eyebrow">${esc(c.name)}</span><h3>${esc(story?.style || "World Cup fan guide")}</h3><p>${esc(story?.style || "Qualified-team storyline and key-player watch.")}</p><div class="chip-row">${["Quality " + fmt(profile.quality), "Star power " + fmt(profile.starPower), "Depth " + fmt(profile.depth)].map((x) => `<span>${esc(x)}</span>`).join("")}</div></article>
-    <article class="guide-card"><h3>Players To Watch</h3><div class="chip-row">${(story?.players?.length ? story.players : keyPlayersFor(c.code).slice(0, 5).map((p) => p.name)).map((p) => `<span>${esc(p)}</span>`).join("") || "<span>Key player guide not available yet</span>"}</div></article>
+    <article class="guide-card"><h3>Players To Watch</h3><div class="chip-row">${keyPlayersForDisplay(c.code).slice(0, 5).map((p) => `<span>${esc(p.name)}${p.eligibilityLabel ? ` · ${esc(p.eligibilityLabel)}` : ""}</span>`).join("") || "<span>Key player guide not available yet</span>"}</div></article>
     <article class="guide-card"><h3>Group Fixtures</h3>${fixtures.map((m) => `<p><strong>${esc(m.homeName)} vs ${esc(m.awayName)}</strong><br><span>${esc(m.ist.label)} IST · ${esc(m.city.city_name)}</span></p>`).join("")}</article>
   </div>`;
 }
 
 function expectedXiHtml(c) {
-  const xi = state.expectedXi.get(c.code) || [];
-  if (!xi.length) return `<div class="compact-item">Expected XI guide not available yet. Showing key players instead.</div>` + countryViewHtml({ ...c, forceKey: true }).replace('id="', 'data-old="');
-  const formation = xi[0]?.formation || "Fan XI";
-  const selected = state.selectedXiPlayer;
-  return `<div class="xi-toolbar"><span class="stage-chip">${esc(formation)}</span><span>Fan-curated expected XI, not official starting XI.</span><button class="ghost-btn" id="resetXiSelection">Reset XI selection</button><label><input type="checkbox" id="xiListToggle" ${state.xiShowList ? "checked" : ""}> View as list</label><label><input type="checkbox" id="xiRolesToggle" ${state.xiShowRoles ? "checked" : ""}> Show roles</label><label><input type="checkbox" id="xiClubsToggle" ${state.xiShowClubs ? "checked" : ""}> Show club labels</label></div>
-  ${state.xiShowList ? xiList(xi) : `<div class="pitch-layout"><div class="pitch">${xi.map((p, i) => xiMarker(p, i, selected)).join("")}</div><aside class="xi-side"><h3>${esc(c.name)} XI Guide</h3><p>${esc(state.countryStories.get(c.code)?.style || "Fan-curated expected XI.")}</p><div id="xiDetail">${selected ? xiDetail(selected, c) : "Click a player marker to see details."}</div></aside></div>`}`;
+  const xiGuide = expectedPlayingXi(c);
+  const xi = xiGuide.players;
+  if (xiGuide.unavailable) return `<div class="compact-item">Expected Playing XI data unavailable.</div>`;
+  if (!xi.length) return `<div class="compact-item">Expected Playing XI data unavailable.</div>`;
+  const selected = xi.find((p) => p.name === state.selectedXiPlayer?.name) || null;
+  return `<div class="xi-toolbar"><span class="stage-chip">${esc(xiGuide.formation)}</span><span>Expected Playing XI</span><button class="ghost-btn" id="resetXiSelection">Reset XI selection</button><label><input type="checkbox" id="xiListToggle" ${state.xiShowList ? "checked" : ""}> View as list</label><label><input type="checkbox" id="xiRolesToggle" ${state.xiShowRoles ? "checked" : ""}> Show roles</label><label><input type="checkbox" id="xiClubsToggle" ${state.xiShowClubs ? "checked" : ""}> Show club labels</label></div>
+  ${state.xiShowList ? xiList(xi) : `<div class="pitch-layout"><div class="pitch">${pitchMarkers(xi, xiGuide.formation, selected)}</div><aside class="xi-side"><h3>${esc(c.name)} Expected Playing XI</h3><p><strong>Formation:</strong> ${esc(xiGuide.formation)}</p><p>${esc(state.countryStories.get(c.code)?.style || "Compact lineup guide.")}</p><div id="xiDetail">${selected ? xiDetail(selected, c) : "Click a player marker to see details."}</div></aside></div>`}`;
+}
+
+function expectedPlayingXi(c) {
+  const curated = state.expectedXi.get(c.code) || [];
+  const registryPlayers = registryPoolForXi(c.code);
+  const registryConstrained = isRegistryConstrainedCountry(c.code, registryPlayers);
+  const officialNotAnnounced = !registryConstrained && countrySquadOpen(c.code);
+  if (registryConstrained) {
+    const resolved = resolveRegistryConstrainedXi(c.code, curated, registryPlayers);
+    return { ...resolved, officialNotAnnounced };
+  }
+  if (curated.length === 11) {
+    const formation = normalizeFormation(curated[0]?.formation || "4-3-3");
+    const players = xiSlots(curated, formation).map((slot) => toXiPlayer(slot, slot, c.code, formation));
+    return { players, formation, source: "curated", unavailable: false, officialNotAnnounced };
+  }
+  const resolved = resolveOpenCountryXi(c.code);
+  return { ...resolved, officialNotAnnounced };
+}
+
+function countrySquadOpen(code) {
+  const status = state.squadStatus.get(code)?.status || "";
+  return countrySquadPending(code) || /preliminary/i.test(status);
+}
+
+function isRegistryConstrainedCountry(code, rows = registryPoolForXi(code)) {
+  const status = state.squadStatus.get(code)?.status || "";
+  return /announced squad|announced list|preliminary squad/i.test(status) && rows.length >= 11;
+}
+
+function registryPoolForXi(code) {
+  return (state.playerRegistry.get(code) || []).filter((p) => p.include).map((p) => {
+    const stat = findCountryPlayerMatch(statsPlayersFor(code), p.name, code, { club: p.club, group: p.positionGroup });
+    return {
+      ...p,
+      name: p.name,
+      club: p.club || stat?.club || "",
+      group: broadGroup(p.positionGroup),
+      roleScore: stat?.roleScore ?? 0,
+      stat
+    };
+  });
+}
+
+function resolveRegistryConstrainedXi(code, curated, registryPlayers) {
+  if (curated.length === 11) {
+    const formation = normalizeFormation(curated[0]?.formation || "4-3-3");
+    const slots = xiSlots(curated, formation);
+    const matched = resolveCuratedTemplateXi(code, slots, formation, registryPlayers);
+    if (matched) return { ...matched, source: "registry_curated_hybrid", unavailable: false };
+  }
+  const synthetic = resolveFormationFromPool(code, registryPlayers, {
+    formations: ["4-3-3", "4-2-3-1", "4-4-2"],
+    fallbackPool: []
+  });
+  if (!synthetic) return { players: [], formation: "4-3-3", source: "unavailable", unavailable: true, reason: "registry-insufficient" };
+  return { ...synthetic, source: "registry_synth", unavailable: false };
+}
+
+function resolveOpenCountryXi(code) {
+  const statsPool = statsPoolForXi(code);
+  const keyPool = keyPlayerPoolForXi(code);
+  const synthetic = resolveFormationFromPool(code, statsPool, {
+    formations: ["4-3-3", "4-2-3-1", "4-4-2"],
+    fallbackPool: keyPool
+  });
+  if (!synthetic) return { players: [], formation: "4-3-3", source: "unavailable", unavailable: true, reason: "no-valid-xi" };
+  return { ...synthetic, source: synthetic.usedFallback ? "stats_key_synth" : "stats_synth", unavailable: false };
+}
+
+function resolveCuratedTemplateXi(code, slots, formation, registryPlayers) {
+  const used = new Set();
+  const assigned = Array(slots.length).fill(null);
+  slots.forEach((slot, i) => {
+    const match = findCountryPlayerMatch(registryPlayers, slot.name, code, {
+      club: slot.club,
+      group: slot.group || positionGroupFromSlot(slot.slot)
+    }, used);
+    if (match) {
+      used.add(normalizePlayerName(match.name));
+      assigned[i] = toXiPlayer(match, slot, code, formation);
+    }
+  });
+  const filled = fillXiSlotsFromPool(code, slots, registryPlayers, used, assigned, formation);
+  if (!filled || !xiIsValid(filled, slots, code)) return null;
+  return { players: filled, formation };
+}
+
+function resolveFormationFromPool(code, primaryPool, opts = {}) {
+  const formations = opts.formations || ["4-3-3", "4-2-3-1", "4-4-2"];
+  const fallbackPool = opts.fallbackPool || [];
+  const attempts = [
+    { formationSet: formations, fallback: [], usedFallback: false },
+    { formationSet: formations, fallback: fallbackPool, usedFallback: fallbackPool.length > 0 }
+  ];
+  for (const attempt of attempts) {
+    const best = bestXiFormation(code, primaryPool, attempt.fallback, attempt.formationSet);
+    if (best) return { ...best, usedFallback: attempt.usedFallback };
+  }
+  return null;
+}
+
+function bestXiFormation(code, primaryPool, fallbackPool, formations) {
+  const candidates = formations.map((formation) => {
+    const slots = defaultSlotsForFormation(formation);
+    const built = buildXiFromPools(code, slots, formation, primaryPool, fallbackPool);
+    if (!built) return null;
+    return {
+      formation,
+      players: built.players,
+      score: built.score
+    };
+  }).filter(Boolean).sort((a, b) => b.score - a.score || formationPriority(a.formation) - formationPriority(b.formation));
+  return candidates[0] || null;
+}
+
+function buildXiFromPools(code, slots, formation, primaryPool, fallbackPool = []) {
+  const used = new Set();
+  const assigned = Array(slots.length).fill(null);
+  const withPrimary = fillXiSlotsFromPool(code, slots, primaryPool, used, assigned, formation);
+  if (!withPrimary && !fallbackPool.length) return null;
+  const finalPlayers = withPrimary && withPrimary.length === slots.length ? withPrimary : fillXiSlotsFromPool(code, slots, fallbackPool, used, assigned, formation);
+  if (!finalPlayers || !xiIsValid(finalPlayers, slots, code)) return null;
+  const score = finalPlayers.reduce((sum, p) => sum + (Number.isFinite(p.selectionScore) ? p.selectionScore : 0), 0);
+  return { players: finalPlayers, score };
+}
+
+function fillXiSlotsFromPool(code, slots, pool, used, assigned, formation) {
+  if (!pool.length) return assigned.every(Boolean) ? assigned : null;
+  const unresolved = slots.map((slot, index) => ({ slot, index })).filter(({ index }) => !assigned[index]).sort((a, b) => {
+    const aCount = availableXiCandidates(pool, a.slot, code, used).length;
+    const bCount = availableXiCandidates(pool, b.slot, code, used).length;
+    return aCount - bCount || slotSpecificity(a.slot) - slotSpecificity(b.slot);
+  });
+  unresolved.forEach(({ slot, index }) => {
+    const choice = availableXiCandidates(pool, slot, code, used)[0];
+    if (!choice) return;
+    used.add(normalizePlayerName(choice.name));
+    const player = toXiPlayer(choice, slot, code, formation);
+    player.selectionScore = xiCandidateScore(choice, slot);
+    assigned[index] = player;
+  });
+  return assigned.every(Boolean) ? assigned : null;
+}
+
+function availableXiCandidates(pool, slot, code, used) {
+  return pool.filter((p) => !used.has(normalizePlayerName(p.name)) && roleCompatible(p, slot, code)).sort((a, b) => xiCandidateScore(b, slot) - xiCandidateScore(a, slot));
+}
+
+function xiCandidateScore(candidate, slot) {
+  return (Number(candidate.roleScore) || Number(candidate.star) || 0) * 100 + slotFitScore(candidate, slot);
+}
+
+function slotFitScore(candidate, slot) {
+  const slotCode = String(slot.slot || "").toUpperCase();
+  const text = `${candidate.pos || ""} ${candidate.role || ""} ${candidate.subRole || ""}`.toLowerCase();
+  if (!slotCode) return 0;
+  if (slotCode === "GK") return /goalkeeper|\bgk\b/.test(text) ? 12 : 0;
+  if (slotCode === "LB" || slotCode === "LWB" || slotCode === "LW" || slotCode === "LM") return /\bleft\b|\blb\b|\blw\b|left-back|left wing|left winger/.test(text) ? 10 : 0;
+  if (slotCode === "RB" || slotCode === "RWB" || slotCode === "RW" || slotCode === "RM") return /\bright\b|\brb\b|\brw\b|right-back|right wing|right winger/.test(text) ? 10 : 0;
+  if (slotCode === "CB") return /centre-back|center-back|\bcb\b/.test(text) ? 10 : 0;
+  if (slotCode === "DM") return /defensive midfield|\bdm\b|holding midfield|anchor/.test(text) ? 10 : 0;
+  if (slotCode === "AM") return /attacking midfield|\bam\b|creator|playmaker/.test(text) ? 10 : 0;
+  if (slotCode === "CM") return /central midfield|\bcm\b|box-to-box|midfield/.test(text) ? 8 : 0;
+  if (slotCode === "ST" || slotCode === "CF") return /striker|\bst\b|centre-forward|center-forward|forward/.test(text) ? 10 : 0;
+  return 0;
+}
+
+function slotSpecificity(slot) {
+  const slotCode = String(slot.slot || "").toUpperCase();
+  if (/^(GK|LB|RB|LW|RW|DM|AM|LWB|RWB)$/.test(slotCode)) return 0;
+  if (/^(CB|CM|ST|CF)$/.test(slotCode)) return 1;
+  return 2;
+}
+
+function formationPriority(formation) {
+  return { "4-3-3": 0, "4-2-3-1": 1, "4-4-2": 2 }[normalizeFormation(formation)] ?? 9;
+}
+
+function statsPoolForXi(code) {
+  return dedupeXiPool(statsPlayersFor(code)
+    .filter((p) => p.code === code || p.country === countryName(code))
+    .map((p) => ({ ...p, group: broadGroup(p.broad || p.pos), roleScore: p.roleScore || 0 })));
+}
+
+function keyPlayerPoolForXi(code) {
+  return dedupeXiPool(keyPlayersFor(code).map((p) => ({
+    ...p,
+    name: p.name,
+    club: p.club || p.club_reference || "",
+    group: broadGroup(p.roleGroup || p.position || p.role || p.subRole) || "Midfielder",
+    roleScore: num(p.star) || 0,
+    pos: p.subRole || p.roleGroup || p.role || p.position || "",
+    role: p.expectedRole || p.role || p.subRole || p.roleGroup || "",
+    star: num(p.star) || 0
+  })));
+}
+
+function dedupeXiPool(rows) {
+  const byKey = new Map();
+  rows.forEach((row) => {
+    const key = compactPlayerName(row.name || row.Player || row.player_name || "");
+    if (!key) return;
+    const current = byKey.get(key);
+    if (!current || (Number(row.roleScore) || Number(row.star) || 0) > (Number(current.roleScore) || Number(current.star) || 0)) {
+      byKey.set(key, row);
+    }
+  });
+  return [...byKey.values()];
+}
+
+function compactPlayerName(name = "") {
+  return normalizePlayerName(name).replace(/\s+/g, "");
+}
+
+function findCountryPlayerMatch(rows, targetName, code, prefs = {}, used = new Set()) {
+  const targetNorm = normalizePlayerName(targetName);
+  const targetCompact = compactPlayerName(targetName);
+  const targetTokens = targetNorm.split(" ").filter(Boolean);
+  const scored = rows.filter((row) => !used.has(normalizePlayerName(row.name || row.Player || row.player_name || ""))).map((row) => {
+    const name = row.name || row.Player || row.player_name || "";
+    const score = countryMatchScore(targetNorm, targetCompact, targetTokens, name);
+    const clubBoost = prefs.club && normalizeClubName(row.club || row.Squad || "") === normalizeClubName(prefs.club) ? 5 : 0;
+    const groupBoost = prefs.group && broadGroup(row.positionGroup || row.group || row.broad || row.roleGroup || row.role || row.pos) === broadGroup(prefs.group) ? 3 : 0;
+    return { row, score: score + clubBoost + groupBoost };
+  }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score || (Number(b.row.roleScore) || 0) - (Number(a.row.roleScore) || 0));
+  if (!scored.length) return null;
+  if (scored.length > 1 && scored[0].score < 250 && scored[0].score === scored[1].score) return null;
+  return scored[0].row;
+}
+
+function countryMatchScore(targetNorm, targetCompact, targetTokens, candidateName) {
+  const candNorm = normalizePlayerName(candidateName);
+  const candCompact = compactPlayerName(candidateName);
+  const candTokens = candNorm.split(" ").filter(Boolean);
+  if (!candNorm) return 0;
+  if (targetNorm === candNorm) return 300;
+  if (targetCompact && targetCompact === candCompact) return 275;
+  const targetLast = targetTokens[targetTokens.length - 1] || "";
+  const candLast = candTokens[candTokens.length - 1] || "";
+  const targetFirst = targetTokens[0] || "";
+  const candFirst = candTokens[0] || "";
+  if (targetLast && targetLast === candLast) {
+    if (targetFirst === candFirst) return 220;
+    if (targetFirst.startsWith(candFirst) || candFirst.startsWith(targetFirst)) return 205;
+    if (targetNorm.includes(candNorm) || candNorm.includes(targetNorm)) return 190;
+  }
+  if (targetNorm.includes(candNorm) || candNorm.includes(targetNorm)) return 150;
+  const overlap = targetTokens.filter((token) => candTokens.includes(token)).length;
+  const minTokens = Math.min(targetTokens.length, candTokens.length);
+  if (overlap >= Math.max(2, minTokens - 1)) return 120 + overlap * 5;
+  return 0;
+}
+
+function xiSlots(curated, formation) {
+  const base = curated.map((p) => ({ ...p, group: p.group || positionGroupFromSlot(p.slot), formation }));
+  const defaults = defaultSlotsForFormation(formation);
+  for (let i = base.length; i < 11; i++) base.push(defaults[i] || defaults[defaults.length - 1]);
+  return base.slice(0, 11);
+}
+
+function defaultSlotsForFormation(formation) {
+  const lines = normalizeFormation(formation || "4-3-3").split("-").map(Number).filter(Boolean);
+  const slots = [{ slot: "GK", group: "Goalkeeper", role: "Goalkeeper", formation }];
+  lines.forEach((count, i) => {
+    const group = i === 0 ? "Defender" : i === lines.length - 1 ? "Forward" : "Midfielder";
+    const row = lineSlots(group, count);
+    for (let n = 0; n < count; n++) slots.push({ slot: row[n], group, role: group, formation });
+  });
+  return slots.slice(0, 11);
+}
+
+function lineSlots(group, count) {
+  const sets = {
+    Defender: { 2: ["CB", "CB"], 3: ["LB", "CB", "RB"], 4: ["LB", "CB", "CB", "RB"], 5: ["LB", "CB", "CB", "CB", "RB"] },
+    Midfielder: { 1: ["CM"], 2: ["DM", "CM"], 3: ["DM", "CM", "AM"], 4: ["DM", "CM", "CM", "AM"], 5: ["DM", "CM", "CM", "AM", "AM"] },
+    Forward: { 1: ["ST"], 2: ["ST", "ST"], 3: ["LW", "ST", "RW"] }
+  };
+  const fallback = group === "Defender" ? "CB" : group === "Midfielder" ? "CM" : "ST";
+  return sets[group]?.[count] || Array.from({ length: count }, () => fallback);
+}
+
+function bestRegistryFit(code, slot, used) {
+  return bestByGroup((state.playerRegistry.get(code) || []).filter((p) => p.include && !used.has(p.nameKey)), slot, code);
+}
+
+function bestStatsFit(code, slot, used) {
+  return bestByGroup(statsPlayersFor(code).filter((p) => !used.has(normalizePlayerName(p.name))).sort((a, b) => (b.roleScore || 0) - (a.roleScore || 0)), slot, code);
+}
+
+function bestKeyPlayerFit(code, slot, used) {
+  return bestByGroup(keyPlayersFor(code).filter((p) => !used.has(normalizePlayerName(p.name))).sort((a, b) => (b.star || 0) - (a.star || 0)), slot, code);
+}
+
+function rebuildStrictXi(code, slots, formation, officialNotAnnounced) {
+  const used = new Set();
+  const pools = strictXiPools(code, officialNotAnnounced);
+  return slots.map((slot) => {
+    const target = broadGroup(slot.group || slot.slot);
+    const candidate = pools.find((p) => !used.has(normalizePlayerName(p.name)) && inferredPlayerGroup(p, code) === target);
+    if (!candidate) return null;
+    used.add(normalizePlayerName(candidate.name));
+    return toXiPlayer(candidate, slot, code, formation);
+  }).filter(Boolean);
+}
+
+function strictXiPools(code, officialNotAnnounced) {
+  const curated = keyPlayersFor(code).sort((a, b) => (b.star || 0) - (a.star || 0));
+  const stats = statsPlayersFor(code).sort((a, b) => (b.roleScore || 0) - (a.roleScore || 0));
+  const registry = (state.playerRegistry.get(code) || []).filter((p) => p.include);
+  return officialNotAnnounced ? [...stats, ...curated] : [...registry, ...stats, ...curated];
+}
+
+function statsPlayersFor(code) {
+  const name = countryName(code);
+  const byKey = new Map();
+  [...state.worldCupPlayerPool, ...state.playersAll, ...rawStatsPlayersFor(code)].forEach((p) => {
+    if (p.code === code || p.country === name) byKey.set(normalizePlayerName(p.name), p);
+  });
+  return [...byKey.values()];
+}
+
+function rawStatsPlayersFor(code) {
+  return (state.rows.players || []).filter((r) => playerCountryCode(r) === code).map((r) => {
+    const info = positionInfo(r.Pos || r.Pos_stats_misc || r.Pos_stats_keeper || "");
+    return {
+      name: r.Player,
+      code,
+      country: countryName(code),
+      club: r.Squad || "",
+      Squad: r.Squad || "",
+      broad: info.broad,
+      pos: info.label,
+      roleScore: firstAvailable(r, ["Min", "Min_stats_playing_time", "Min_stats_keeper"]) || 0
+    };
+  }).filter((p) => p.name);
+}
+
+function bestByGroup(rows, slot, code) {
+  const target = broadGroup(slot.group || slot.slot);
+  return rows.find((p) => inferredPlayerGroup(p, code) === target) || null;
+}
+
+function roleCompatible(player, slot, code) {
+  return inferredPlayerGroup(player, code) === broadGroup(slot.group || slot.slot);
+}
+
+function xiIsValid(players, slots, code) {
+  if (players.length !== 11) return false;
+  const names = players.map((p) => normalizePlayerName(p.name));
+  if (new Set(names).size !== 11) return false;
+  if (players.filter((p) => inferredPlayerGroup(p, code) === "Goalkeeper").length !== 1) return false;
+  return players.every((p, i) => roleCompatible(p, slots[i], code));
+}
+
+function inferredPlayerGroup(p, code) {
+  const direct = broadGroup(p.positionGroup || p.group || p.broad || p.roleGroup || p.role || p.pos);
+  if (direct) return direct;
+  const key = normalizePlayerName(p.name);
+  const stat = state.worldCupPlayerPool.find((x) => x.code === code && normalizePlayerName(x.name) === key);
+  const curated = keyPlayersFor(code).find((x) => normalizePlayerName(x.name) === key);
+  return broadGroup(stat?.broad || stat?.pos || curated?.roleGroup || curated?.role);
+}
+
+function broadGroup(value = "") {
+  const text = String(value).toLowerCase().trim();
+  if (!text) return "";
+  if (/\bgk\b|goalkeeper/.test(text)) return "Goalkeeper";
+  if (/midfielder|\bmf\b|\bdm\b|\bcm\b|\bam\b/.test(text)) return "Midfielder";
+  if (/defender|defence|defense|\bdf\b|\bcb\b|\blb\b|\brb\b|full-back|centre-back|center-back/.test(text)) return "Defender";
+  if (/forward|\bfw\b|\blw\b|\brw\b|\bst\b|winger|striker/.test(text)) return "Forward";
+  return "";
+}
+
+function toXiPlayer(source, slot, code, formation) {
+  const name = source.name || source.Player || source.player_name;
+  const group = broadGroup(slot.group || slot.slot);
+  return {
+    name,
+    club: clubForXiPlayer({ ...slot, name, club: source.club || source.Squad || slot.club }, code),
+    slot: slot.slot || source.slot || group,
+    group,
+    role: slot.role || source.role || source.pos || group,
+    formation,
+    confidence: slot.confidence || "",
+    notes: slot.notes || source.notes || "Expected Playing XI role.",
+    selectionScore: source.selectionScore ?? source.roleScore ?? source.star ?? 0
+  };
+}
+
+function clubForXiPlayer(p, code) {
+  const registry = findCountryPlayerMatch(state.playerRegistry.get(code) || [], p.name, code, { club: p.club, group: p.group });
+  const stat = findCountryPlayerMatch(statsPlayersFor(code), p.name, code, { club: p.club, group: p.group });
+  const key = findCountryPlayerMatch(keyPlayersFor(code), p.name, code, { club: p.club, group: p.group });
+  return p.club || registry?.club || stat?.club || key?.club || "";
+}
+
+function displayClubName(club = "") {
+  return String(club)
+    .replace(/^Manchester United$/i, "Man United")
+    .replace(/^Manchester City$/i, "Man City")
+    .replace(/^Paris Saint-Germain$/i, "PSG")
+    .replace(/^Bayern Munich$/i, "Bayern")
+    .replace(/^Newcastle United$/i, "Newcastle")
+    .replace(/^Tottenham Hotspur$/i, "Tottenham")
+    .replace(/^Nottingham Forest$/i, "Nott'm Forest")
+    .replace(/^Inter Milan$/i, "Inter")
+    .replace(/^Internazionale$/i, "Inter");
+}
+
+function positionGroupFromSlot(slot = "") {
+  const s = String(slot).toUpperCase();
+  if (s === "GK") return "Goalkeeper";
+  if (/B$|CB|^D/.test(s)) return "Defender";
+  if (/M$|DM|CM|AM/.test(s)) return "Midfielder";
+  return "Forward";
 }
 
 function xiList(xi) {
+  return `<div class="compact-list">${xi.map((p) => `<div class="compact-item"><strong>${esc(p.name)}</strong><span>${esc(p.slot)} | ${esc(p.role)}${state.xiShowClubs && p.club ? ` | ${esc(displayClubName(p.club))}` : ""}</span></div>`).join("")}</div>`;
   return `<div class="compact-list">${xi.map((p) => `<div class="compact-item"><strong>${esc(p.name)}</strong><span>${esc(p.slot)} · ${esc(p.role)} · ${esc(p.confidence)} confidence</span></div>`).join("")}</div>`;
 }
 
-function xiMarker(p, i, selected) {
-  const pos = pitchPosition(p.slot, i);
-  const active = selected?.name === p.name ? " selected" : "";
-  return `<button class="xi-marker ${roleClass(p.group)}${active}" data-xi="${esc(p.name)}" style="left:${pos.x}%;top:${pos.y}%;" title="${esc(p.name)} · ${esc(p.role)}"><strong>${shortName(p.name)}</strong>${state.xiShowRoles ? `<small>${esc(p.slot)}</small>` : ""}</button>`;
+function pitchMarkers(xi, formation, selected) {
+  const positions = formationPositions(xi, formation);
+  return xi.map((p, i) => xiMarker(p, positions[i], selected)).join("");
 }
 
-function pitchPosition(slot, i) {
-  const map = { GK:[50,90], RB:[78,72], RCB:[62,72], CB:[50,72], LCB:[38,72], LB:[22,72], DM:[50,58], RCM:[66,50], CM:[50,48], LCM:[34,50], AM:[50,36], RW:[78,24], LW:[22,24], ST:[50,18], CF:[50,18] };
-  const key = String(slot).toUpperCase();
-  const p = map[key] || [20 + (i % 4) * 20, 70 - Math.floor(i / 4) * 18];
-  return { x: p[0], y: p[1] };
+function xiMarker(p, pos, selected) {
+  const active = selected?.name === p.name ? " selected" : "";
+  const club = state.xiShowClubs && p.club ? `<small class="xi-club">${esc(displayClubName(p.club))}</small>` : "";
+  return `<button class="xi-marker ${roleClass(p.group)}${active}" data-xi="${esc(p.name)}" style="left:${pos.x}%;top:${pos.y}%;" title="${esc(p.name)} | ${esc(p.role)}${p.club ? ` | ${esc(p.club)}` : ""}"><strong>${esc(p.name)}</strong>${state.xiShowRoles ? `<small>${esc(p.slot)}</small>` : ""}${club}</button>`;
+  return `<button class="xi-marker ${roleClass(p.group)}${active}" data-xi="${esc(p.name)}" style="left:${pos.x}%;top:${pos.y}%;" title="${esc(p.name)} | ${esc(p.role)}"><strong>${esc(p.name)}</strong>${state.xiShowRoles ? `<small>${esc(p.slot)}</small>` : ""}</button>`;
+  const label = playerEligibility(p.name, p.countryCode || $("countrySelect").value, "").label;
+  return `<button class="xi-marker ${roleClass(p.group)}${active}" data-xi="${esc(p.name)}" style="left:${pos.x}%;top:${pos.y}%;" title="${esc(p.name)} · ${esc(p.role)}${label ? ` · ${esc(label)}` : ""}"><strong>${esc(p.name)}</strong>${state.xiShowRoles ? `<small>${esc(p.slot)}${label ? ` · ${esc(label)}` : ""}</small>` : ""}</button>`;
+}
+
+function formationPositions(xi, formation) {
+  const lines = normalizeFormation(formation).split("-").map(Number).filter(Boolean);
+  const out = Array(xi.length);
+  const gk = xi.findIndex((p) => slotGroup(p) === "gk");
+  if (gk >= 0) out[gk] = { x: 50, y: 90 };
+  const outfield = xi.map((p, i) => ({ p, i })).filter(({ i }) => i !== gk);
+  const grouped = [
+    outfield.filter(({ p }) => slotGroup(p) === "def"),
+    outfield.filter(({ p }) => slotGroup(p) === "mid"),
+    outfield.filter(({ p }) => slotGroup(p) === "att")
+  ];
+  const counts = lines.length >= 2 ? lines : grouped.map((g) => g.length).filter(Boolean);
+  const yLines = counts.length === 4 ? [72, 58, 42, 22] : counts.length === 2 ? [68, 28] : [72, 52, 24];
+  let cursor = 0;
+  counts.forEach((count, lineIndex) => {
+    const linePlayers = outfield.slice(cursor, cursor + count).sort((a, b) => slotOrder(a.p.slot) - slotOrder(b.p.slot));
+    cursor += count;
+    const xs = spreadX(linePlayers.length);
+    linePlayers.forEach(({ i }, n) => out[i] = { x: xs[n], y: yLines[lineIndex] ?? 50 });
+  });
+  outfield.slice(cursor).forEach(({ i }, n) => out[i] = { x: spreadX(outfield.length - cursor)[n], y: 36 });
+  return out.map((p, i) => p || { x: 20 + (i % 4) * 20, y: 70 - Math.floor(i / 4) * 18 });
+}
+
+function slotGroup(p) {
+  const slot = String(p.slot).toUpperCase();
+  if (slot === "GK") return "gk";
+  if (/B$|CB|^D/.test(slot) || /def/i.test(p.group)) return "def";
+  if (/M$|DM|CM|AM/.test(slot) || /mid/i.test(p.group)) return "mid";
+  return "att";
+}
+
+function slotOrder(slot = "") {
+  const order = { LW: 1, LM: 1, LB: 1, LWB: 1, LCM: 2, LCB: 2, CM: 3, CB: 3, DM: 3, AM: 3, ST: 4, CF: 4, RCM: 5, RCB: 5, RW: 6, RM: 6, RB: 6, RWB: 6 };
+  return order[String(slot).toUpperCase()] ?? 4;
+}
+
+function spreadX(count) {
+  if (count <= 1) return [50];
+  if (count === 2) return [35, 65];
+  if (count === 3) return [25, 50, 75];
+  if (count === 4) return [18, 39, 61, 82];
+  return Array.from({ length: count }, (_, i) => 14 + i * (72 / Math.max(1, count - 1)));
 }
 
 function roleClass(group) {
@@ -917,7 +1532,18 @@ function shortName(name) {
 
 function xiDetail(p, c) {
   const stat = state.worldCupPlayerPool.find((x) => x.name.toLowerCase() === p.name.toLowerCase() && x.code === c.code);
-  return `<div class="compact-item"><strong>${esc(p.name)}</strong><span>${esc(p.role)} · ${esc(p.confidence)} confidence<br>${esc(p.notes || "Why they matter: key role in the fan-curated XI.")}${stat ? `<br>Club-form support: Role Score ${fmt(stat.roleScore)}, Attack ${fmt(stat.attack)}, Creativity ${fmt(stat.creativity)}` : ""}</span></div>`;
+  const clubLine = p.club || stat?.club ? `<br>Club: ${esc(p.club || stat.club)}` : "";
+  if (/goal/i.test(`${p.group} ${p.role} ${p.slot}`)) {
+    return `<div class="compact-item"><strong>${esc(p.name)}</strong><span>Role: ${esc(p.role || p.slot)}${clubLine}<br>${esc(p.notes || "Goalkeeper role in the Expected Playing XI.")}</span></div>`;
+  }
+  return `<div class="compact-item"><strong>${esc(p.name)}</strong><span>Role: ${esc(p.role || p.slot)}${clubLine}<br>${esc(p.notes || "Key role in the Expected Playing XI.")}</span></div>`;
+  const status = playerEligibility(p.name, c.code, stat?.club || "");
+  const statusText = status.label ? `<br>Status: ${esc(status.label)}` : "";
+  const club = stat?.club ? `<br>Club: ${esc(stat.club)}` : "";
+  if (/goal/i.test(`${p.group} ${p.role} ${p.slot}`)) {
+    return `<div class="compact-item"><strong>${esc(p.name)}</strong><span>${esc(p.role)} · ${esc(p.confidence)} confidence${club}${statusText}<br>${esc(p.notes || "Goalkeeper role in the fan-curated XI.")}</span></div>`;
+  }
+  return `<div class="compact-item"><strong>${esc(p.name)}</strong><span>${esc(p.role)} · ${esc(p.confidence)} confidence${club}${statusText}<br>${esc(p.notes || "Why they matter: key role in the fan-curated XI.")}${stat ? `<br>Club-form support: Role Score ${fmt(stat.roleScore)}, Attack ${fmt(stat.attack)}, Creativity ${fmt(stat.creativity)}` : ""}</span></div>`;
 }
 
 function strongestXI(c) {
@@ -926,24 +1552,59 @@ function strongestXI(c) {
     ...c.players.filter((p) => p.broad === "Defender").sort((a, b) => b.overall - a.overall).slice(0, 4),
     ...c.players.filter((p) => p.broad === "Midfielder").sort((a, b) => b.overall - a.overall).slice(0, 3),
     ...c.players.filter((p) => p.broad === "Forward").sort((a, b) => b.overall - a.overall).slice(0, 3)
-  ];
+  ].filter(([key]) => id !== "playerTable" || key !== "age");
   return `<div class="xi-card"><strong>Strongest XI-style visual</strong><span>Based on club-form data, not official squads.</span><div>${picks.map((p) => `<button class="player-token" data-player="${p.id}">${esc(p.name)}<small>${p.broad}</small></button>`).join("")}</div></div>`;
 }
 
 function filteredPlayers() {
   const q = $("playerSearch").value.toLowerCase();
-  const min = num($("minutesFilter").value) || 0;
-  return state.worldCupPlayerPool.filter((p) => p.min >= min && (!q || p.name.toLowerCase().includes(q)) && (!$("nationalityFilter").value || p.code === $("nationalityFilter").value) && (!$("clubFilter").value || p.club === $("clubFilter").value) && (!$("leagueFilter").value || p.league === $("leagueFilter").value) && (!$("positionFilter").value || p.broad === $("positionFilter").value) && (!$("ageFilter").value || ($("ageFilter").value === "u23" ? p.age < 23 : $("ageFilter").value === "prime" ? p.age >= 23 && p.age < 30 : p.age >= 30)));
+  return state.worldCupPlayerPool.filter((p) => (!q || p.name.toLowerCase().includes(q)) && (!$("nationalityFilter").value || p.code === $("nationalityFilter").value) && (!$("clubFilter").value || p.club === $("clubFilter").value) && (!$("leagueFilter").value || p.league === $("leagueFilter").value) && (!$("positionFilter").value || p.broad === $("positionFilter").value) && (!$("ageFilter").value || ($("ageFilter").value === "u23" ? p.age < 23 : $("ageFilter").value === "prime" ? p.age >= 23 && p.age < 30 : p.age >= 30)));
+}
+
+const STAT_HELP = {
+  min: "Club minutes in the uploaded club-form data. Bigger samples usually make comparisons more reliable.",
+  goals: "Goals recorded in the available club-form row.",
+  assists: "Assists recorded in the available club-form row.",
+  attack: "Role-aware attacking signal from goals, expected threat, shots and related available output.",
+  creativity: "Chance creation and ball-progression signal from assists, expected assisted goals, key passes and similar data where available.",
+  defense: "Defensive contribution signal from tackles, interceptions, blocks, clearances and similar actions where available.",
+  goalkeeping: "Goalkeeper-specific signal from save rate, saves, clean sheets, goals-against control and distribution where available.",
+  roleScore: "A role-relative club-form index. A high score means this player grades strongly against similar-role players in the available data, with minutes reliability considered."
+};
+
+function playerStatusClass(label = "") {
+  if (/squad not confirmed/i.test(label)) return "pending";
+  if (/not in reported squad/i.test(label)) return "unavailable";
+  return "eligible";
+}
+
+function playerStatusDot(label = "") {
+  return label ? `<span class="status-dot ${playerStatusClass(label)}" title="${esc(label)}"></span>` : "";
+}
+
+function playerModeCopy() {
+  if (state.playerList === "key") {
+    return statusLegend();
+  }
+  return `<span>Stats Lens and comparison use available club-form rows, mainly top-five-league coverage. Stars outside that coverage may not appear here.</span>`;
+}
+
+function statusLegend() {
+  return `<span class="status-legend"><span class="status-dot pending"></span> Squad status not confirmed <span class="status-dot unavailable"></span> Not in reported squad</span>`;
 }
 
 function playerListRows() {
   if (state.playerList === "key") {
-    return [...state.keyPlayers.values()].flat().map((kp, i) => {
+    return [...state.keyPlayers.values()].flat().filter((kp) => {
+      const status = playerEligibility(kp.name, kp.countryCode, kp.club);
+      kp.eligibilityLabel = status.label;
+      return status.eligible || status.pending;
+    }).map((kp, i) => {
       const exact = state.worldCupPlayerPool.filter((p) => p.name === kp.name);
       const normalized = exact.length ? exact : state.worldCupPlayerPool.filter((p) => normalizePlayerName(p.name) === normalizePlayerName(kp.name));
       const stat = normalized.sort((a, b) => (b.code === kp.countryCode) - (a.code === kp.countryCode) || (normalizePlayerName(b.club) === normalizePlayerName(kp.club)) - (normalizePlayerName(a.club) === normalizePlayerName(kp.club)))[0];
-      return stat ? { ...stat, name: kp.name, roleScore: stat.roleScore, overall: kp.star, attack: stat.attack, creativity: stat.creativity, defense: stat.defense, goalkeeping: stat.goalkeeping } : {
-        id: `k${i}`, name: kp.name, country: countryName(kp.countryCode), code: kp.countryCode, club: kp.club || "", pos: kp.roleGroup || kp.role || "Key player", broad: /goal/i.test(kp.roleGroup) ? "Goalkeeper" : /def/i.test(kp.roleGroup) ? "Defender" : /mid/i.test(kp.roleGroup) ? "Midfielder" : "Forward", age: null, min: null, goals: null, assists: null, attack: null, creativity: null, defense: null, goalkeeping: null, roleScore: null, overall: kp.star
+      return stat ? { ...stat, name: kp.name, eligibilityLabel: kp.eligibilityLabel, roleScore: stat.roleScore, overall: kp.star, attack: stat.attack, creativity: stat.creativity, defense: stat.defense, goalkeeping: stat.goalkeeping } : {
+        id: `k${i}`, name: kp.name, country: countryName(kp.countryCode), code: kp.countryCode, club: kp.club || "", pos: kp.roleGroup || kp.role || "Key player", broad: /goal/i.test(kp.roleGroup) ? "Goalkeeper" : /def/i.test(kp.roleGroup) ? "Defender" : /mid/i.test(kp.roleGroup) ? "Midfielder" : "Forward", age: null, min: null, goals: null, assists: null, attack: null, creativity: null, defense: null, goalkeeping: null, roleScore: null, overall: kp.star, eligibilityLabel: kp.eligibilityLabel
       };
     });
   }
@@ -961,20 +1622,33 @@ function playerListRows() {
 
 function renderPlayers() {
   const allowCompare = state.playerList === "comparison";
-  renderSortableTable("playerTable", playerListRows(), state.playerSort, (sort) => state.playerSort = sort, allowCompare);
+  const rows = playerListRows();
+  $("playerFilters").classList.toggle("hidden", state.playerList === "key");
+  $("comparisonCard").classList.toggle("hidden", !allowCompare);
+  $("playerModeNote").innerHTML = playerModeCopy();
+  const q = $("playerSearch").value.trim();
+  const missingSearch = state.playerList !== "key" && q && !rows.length;
+  $("playerSearchNote").classList.toggle("hidden", !missingSearch);
+  $("playerSearchNote").textContent = missingSearch ? `No club-form row found for "${q}". The player may be outside the covered leagues or absent from the uploaded club-form data.` : "";
+  renderSortableTable("playerTable", rows, state.playerSort, (sort) => state.playerSort = sort, allowCompare);
   renderRadar();
 }
 
 function renderSortableTable(id, rows, sortState, setSort, allowCompare = false) {
   const columns = [
     ["name", "Player"], ["country", "Country"], ["club", "Club"], ["pos", "Role"], ["age", "Age"], ["min", "Minutes"], ["goals", "Goals"], ["assists", "Assists"], ["attack", "Attack"], ["creativity", "Creativity"], ["defense", "Defense"], ["goalkeeping", "Goalkeeping"], ["roleScore", "Role Score"]
-  ];
+  ].filter(([key]) => id !== "playerTable" || key !== "age");
   const sorted = [...rows].sort((a, b) => compareValue(a[sortState.key], b[sortState.key], sortState.dir));
   const pageSize = 18;
   const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
   state.playerPage = Math.min(state.playerPage, pages);
   const pageRows = id === "playerTable" ? sorted.slice((state.playerPage - 1) * pageSize, state.playerPage * pageSize) : sorted;
   $(id).innerHTML = `<table><thead><tr>${allowCompare ? "<th>Compare</th>" : ""}${columns.map(([key, label]) => `<th><button class="sort-btn ${sortState.key === key ? "active-sort" : ""}" data-table="${id}" data-key="${key}">${label}${sortState.key === key ? (sortState.dir === "asc" ? " ↑" : " ↓") : ""}</button></th>`).join("")}</tr></thead><tbody>${pageRows.map((p) => rowHtml(p, allowCompare)).join("")}</tbody></table>${id === "playerTable" ? pagination(sorted.length, pages) : ""}`;
+  const headers = columns.map(([key, label]) => {
+    const arrow = sortState.key === key ? (sortState.dir === "asc" ? " &uarr;" : " &darr;") : "";
+    return `<th><button class="sort-btn ${sortState.key === key ? "active-sort" : ""}" data-table="${id}" data-key="${key}" title="${esc(STAT_HELP[key] || `Sort by ${label}`)}">${label}${arrow}</button></th>`;
+  }).join("");
+  $(id).innerHTML = `<table><thead><tr>${allowCompare ? "<th>Compare</th>" : ""}${headers}</tr></thead><tbody>${pageRows.map((p) => rowHtml(p, allowCompare, id)).join("")}</tbody></table>${id === "playerTable" ? pagination(sorted.length, pages) : ""}`;
   $(id).querySelectorAll(".sort-btn").forEach((btn) => btn.addEventListener("click", () => {
     const dir = sortState.key === btn.dataset.key && sortState.dir === "desc" ? "asc" : "desc";
     setSort({ key: btn.dataset.key, dir });
@@ -992,9 +1666,12 @@ function compareValue(a, b, dir) {
   return (av > bv ? 1 : av < bv ? -1 : 0) * (dir === "asc" ? 1 : -1);
 }
 
-function rowHtml(p, allowCompare) {
+function rowHtml(p, allowCompare, tableId = "") {
   const checked = state.compare.has(p.id) ? "checked" : "";
-  return `<tr>${allowCompare ? `<td><input class="compare-check" data-player="${p.id}" type="checkbox" ${checked}></td>` : ""}<td>${esc(p.name)}</td><td>${esc(p.country)}</td><td class="muted">${esc(p.club)}</td><td>${esc(p.pos)}</td><td>${fmt(p.age)}</td><td>${fmt(p.min)}</td><td>${fmt(p.goals)}</td><td>${fmt(p.assists)}</td><td>${fmt(p.attack)}</td><td>${fmt(p.creativity)}</td><td>${fmt(p.defense)}</td><td>${fmt(p.goalkeeping)}</td><td><strong>${fmt(p.roleScore ?? p.overall)}</strong></td></tr>`;
+  const status = p.eligibilityLabel || (allowCompare ? playerEligibility(p.name, p.code, p.club).label : "");
+  const ageCell = tableId === "playerTable" ? "" : `<td>${fmt(p.age)}</td>`;
+  const scoreText = tableId === "playerTable" ? fmt(p.roleScore) : fmt(p.roleScore ?? p.overall);
+  return `<tr>${allowCompare ? `<td><input class="compare-check" data-player="${p.id}" type="checkbox" ${checked}></td>` : ""}<td><span class="player-name-cell">${playerStatusDot(status)}<span>${esc(p.name)}</span></span></td><td>${esc(p.country)}</td><td class="muted">${esc(p.club)}</td><td>${esc(p.pos)}</td>${ageCell}<td>${fmt(p.min)}</td><td>${fmt(p.goals)}</td><td>${fmt(p.assists)}</td><td>${fmt(p.attack)}</td><td>${fmt(p.creativity)}</td><td>${fmt(p.defense)}</td><td>${fmt(p.goalkeeping)}</td><td><strong>${scoreText}</strong></td></tr>`;
 }
 
 function pagination(total, pages) {
@@ -1025,14 +1702,27 @@ function toggleCompare(id, checked) {
 function renderRadar() {
   const players = [...state.compare.values()];
   $("compareNotice").textContent = players.length === 2 ? `Comparing two ${players[0].broad.toLowerCase()} profiles.` : players.length === 1 ? "Select one more player from the same role group for a fair comparison." : "Select two players with the checkboxes to compare role-appropriate strengths.";
-  $("radarCompare").innerHTML = players.length === 2 ? radarSvg(players) + comparisonSummary(players) : `<div class="empty-radar">${players.length ? "One player selected. Pick one more comparable player." : "No players selected yet."}</div>`;
+  $("radarCompare").innerHTML = players.length === 2 ? `<div class="radar-comparison-layout">${radarSvg(players)}${comparisonSummary(players)}</div>` : `<div class="empty-radar">${players.length ? "One player selected. Pick one more comparable player." : "No players selected yet."}</div>`;
 }
 
 function comparisonSummary(players) {
   const [a, b] = players;
-  const aLead = a.attack > b.attack ? `${a.name} carries more direct goal threat` : `${b.name} carries more direct goal threat`;
-  const cLead = a.creativity > b.creativity ? `${a.name} offers stronger creation` : `${b.name} offers stronger creation`;
-  return `<p class="chart-note">${esc(aLead)}, while ${esc(cLead.toLowerCase())}. Radar scores are normalized against comparable ${esc(a.broad.toLowerCase())}s.</p>`;
+  const role = a.broad;
+  const minuteGap = Math.abs((a.min || 0) - (b.min || 0));
+  const sampleText = minuteGap > 900 ? `${(a.min || 0) > (b.min || 0) ? a.name : b.name} has the safer minutes sample; read the smaller sample with more caution.` : "The minutes samples are close enough for a fair profile read.";
+  let text;
+  if (role === "Goalkeeper") {
+    text = `${sampleText} This is a keeper profile check: shot-stopping security, workload handling, goals-against control and distribution context matter more than a single winner.`;
+  } else if (role === "Defender") {
+    text = `${sampleText} Use the shape to separate front-foot defenders from deeper box defenders, then check whether progression or pure defending is the better fit.`;
+  } else if (role === "Midfielder") {
+    text = `${sampleText} The useful read is role balance: control and progression versus final-third creation and ball-winning support.`;
+  } else if (/winger/i.test(`${a.pos} ${b.pos}`)) {
+    text = `${sampleText} Treat this as a style split between direct threat, carrying volume, chance creation and defensive work rate.`;
+  } else {
+    text = `${sampleText} The radar helps separate penalty-box force from broader forward link play and chance involvement.`;
+  }
+  return `<aside class="comparison-summary-card"><h4>What this means</h4><p>${esc(text)} Radar scores are normalized against comparable ${esc(role.toLowerCase())}s.</p></aside>`;
 }
 
 function radarAxes(role) {
@@ -1066,6 +1756,133 @@ function radarSvg(players) {
   return `<div class="radar-card"><svg viewBox="0 0 ${size} ${size}" role="img" aria-label="Player radar comparison">${grid}${spokes}${polys}</svg><div class="radar-legend">${legend}</div></div>`;
 }
 
+function clubMatches(a = "", b = "") {
+  const ak = normalizeClubName(a);
+  const bk = normalizeClubName(b);
+  return Boolean(ak && bk && (ak === bk || ak.includes(bk) || bk.includes(ak)));
+}
+
+function statForKeyPlayer(kp) {
+  const candidates = state.worldCupPlayerPool.filter((p) => normalizePlayerName(p.name) === normalizePlayerName(kp.name) && p.code === kp.countryCode);
+  return candidates.sort((a, b) => (clubMatches(b.club, kp.club) - clubMatches(a.club, kp.club)) || b.min - a.min)[0] || null;
+}
+
+function clubRoleGroup(p = {}) {
+  return broadGroup(p.roleGroup || p.role || p.subRole || p.position || p.pos || p.broad) || "Midfielder";
+}
+
+function clubWatchRowFromKey(kp, stat = statForKeyPlayer(kp)) {
+  const broad = clubRoleGroup(kp);
+  return {
+    ...(stat || {}),
+    id: stat?.id || `club-key-${normalizePlayerName(kp.countryCode)}-${normalizePlayerName(kp.name)}`,
+    name: kp.name,
+    country: countryName(kp.countryCode),
+    code: kp.countryCode,
+    club: kp.club || stat?.club || "",
+    pos: kp.subRole || kp.roleGroup || kp.role || broad,
+    broad,
+    age: stat?.age ?? null,
+    min: stat?.min ?? null,
+    goals: stat?.goals ?? null,
+    assists: stat?.assists ?? null,
+    attack: stat?.attack ?? null,
+    creativity: stat?.creativity ?? null,
+    defense: stat?.defense ?? null,
+    goalkeeping: stat?.goalkeeping ?? null,
+    roleScore: stat?.roleScore ?? null,
+    overall: kp.star || stat?.overall || 0,
+    star: kp.star || 0,
+    tier: kp.tier,
+    subRole: kp.subRole,
+    eligibilityLabel: playerEligibility(kp.name, kp.countryCode, kp.club).label,
+    keyPlayer: true
+  };
+}
+
+function clubWatchShownPlayers(club) {
+  const rows = [];
+  const seen = new Set();
+  const add = (p) => {
+    const key = `${p.code}:${normalizePlayerName(p.name)}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      rows.push(p);
+    }
+  };
+  [...state.keyPlayers.values()].flat()
+    .filter((kp) => clubMatches(kp.club, club))
+    .filter((kp) => {
+      const status = playerEligibility(kp.name, kp.countryCode, kp.club);
+      return status.eligible || status.pending;
+    })
+    .sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || b.star - a.star || a.priority - b.priority)
+    .forEach((kp) => add(clubWatchRowFromKey(kp)));
+  state.playerRegistry.forEach((players, code) => {
+    players.filter((p) => p.include && clubMatches(p.club, club)).forEach((p) => {
+      const stat = state.worldCupPlayerPool.find((x) => x.code === code && normalizePlayerName(x.name) === p.nameKey);
+      add({
+        ...(stat || {}),
+        id: stat?.id || `club-reg-${code}-${p.nameKey}`,
+        name: p.name,
+        country: countryName(code),
+        code,
+        club: p.club || stat?.club || club,
+        pos: p.positionGroup || stat?.pos || "",
+        broad: broadGroup(p.positionGroup || stat?.broad || stat?.pos) || "Midfielder",
+        age: stat?.age ?? null,
+        min: stat?.min ?? null,
+        goals: stat?.goals ?? null,
+        assists: stat?.assists ?? null,
+        attack: stat?.attack ?? null,
+        creativity: stat?.creativity ?? null,
+        defense: stat?.defense ?? null,
+        goalkeeping: stat?.goalkeeping ?? null,
+        roleScore: stat?.roleScore ?? null,
+        overall: stat?.overall || 0,
+        star: 0,
+        eligibilityLabel: ""
+      });
+    });
+  });
+  return rows;
+}
+
+function clubHiddenPlayers(club) {
+  const q = qualifiedCodes();
+  const seen = new Set();
+  return state.playersAll.filter((p) => clubMatches(p.club, club)).map((p) => {
+    if (!q.has(p.code)) return { ...p, reason: "country not qualified" };
+    if (!countrySquadOpen(p.code) && !isWorldCupEligiblePlayer(p.name, p.code, p.club)) return { ...p, reason: "not in reported squad" };
+    return null;
+  }).filter(Boolean).filter((p) => {
+    const key = `${p.code}:${normalizePlayerName(p.name)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function clubInsightCards(rows) {
+  const curated = rows.filter((p) => p.keyPlayer);
+  const byPriority = [...rows].sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || (b.star || 0) - (a.star || 0) || (b.roleScore || 0) - (a.roleScore || 0));
+  const top = byPriority[0];
+  const used = new Set(top ? [normalizePlayerName(top.name)] : []);
+  const unused = (p) => !used.has(normalizePlayerName(p.name));
+  const young = [...rows].filter((p) => unused(p) && Number.isFinite(p.age) && p.age <= 23).sort((a, b) => a.age - b.age || tierRank(a.tier) - tierRank(b.tier) || (b.star || 0) - (a.star || 0))[0] || curated.find((p) => unused(p) && /young|u23|prospect/i.test(`${p.subRole} ${p.pos}`));
+  if (young) used.add(normalizePlayerName(young.name));
+  const creative = [...rows].filter((p) => unused(p) && /midfielder|creator|winger|attacking|forward/i.test(`${p.pos} ${p.broad}`)).sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || (b.star || 0) - (a.star || 0) || (b.creativity || 0) - (a.creativity || 0))[0];
+  if (creative) used.add(normalizePlayerName(creative.name));
+  const defender = [...rows].filter((p) => unused(p) && (p.broad === "Defender" || /defensive midfielder|centre-back|center-back|full-back/i.test(p.pos))).sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || (b.star || 0) - (a.star || 0) || (b.defense || 0) - (a.defense || 0))[0];
+  const label = (p, fallback) => p ? `${p.name} · ${p.country}` : fallback;
+  return [
+    ["Top performer", label(top, "No World Cup-linked player")],
+    ["Young player to watch", label(young, "No U23 profile found")],
+    ["Most creative", label(creative, "No creator profile found")],
+    ["Defensive anchor", label(defender, "Not enough defender data")]
+  ];
+}
+
 function renderClub() {
   const club = state.clubWatchClub || preferredClub();
   if ($("clubWatchSelect").value !== club) $("clubWatchSelect").value = club;
@@ -1077,39 +1894,28 @@ function renderClub() {
     $("clubTable").innerHTML = `<div class="compact-item">Choose a club to inspect qualified-country players.</div>`;
     $("clubMatchups").innerHTML = `<div class="compact-item">Choose a club to see World Cup matchup watch.</div>`;
     $("notShownList").innerHTML = `<div class="compact-item">Choose a club to see players not shown.</div>`;
+    $("clubStatusLegend").innerHTML = "";
     return;
   }
   const clubQ = $("clubSearch").value.toLowerCase();
-  const shown = state.worldCupPlayerPool.filter((p) => p.club === club && (!clubQ || `${p.name} ${p.country} ${p.pos}`.toLowerCase().includes(clubQ))).sort((a, b) => b.overall - a.overall);
-  const hidden = state.playersAll.filter((p) => p.club === club && !state.worldCupPlayerPool.includes(p));
-  const curatedClub = [...state.keyPlayers.values()].flat().filter((p) => p.club === club).sort((a, b) => tierRank(a.tier) - tierRank(b.tier) || b.star - a.star);
-  const curatedNames = new Set(curatedClub.map((p) => p.name.toLowerCase()));
-  const priorityShown = [...shown].sort((a, b) => (curatedNames.has(b.name.toLowerCase()) - curatedNames.has(a.name.toLowerCase())) || b.overall - a.overall);
-  const curatedDefender = curatedClub.find((p) => /defender|centre-back|full-back|defensive midfielder/i.test(`${p.role} ${p.roleGroup} ${p.subRole}`));
-  const cards = curatedClub.length ? [
-    ["Top performer", curatedClub[0]?.name || "No qualified player rows"],
-    ["Young player to watch", curatedClub.find((p) => /young|u23|prospect/i.test(`${p.role} ${p.roleGroup} ${p.subRole}`))?.name || priorityShown.filter((p) => p.age < 23).sort((a, b) => b.overall - a.overall)[0]?.name || "None in qualified pool"],
-    ["Most creative", curatedClub.find((p) => /creator|attacking midfielder|midfielder|playmaker/i.test(`${p.role} ${p.roleGroup} ${p.subRole}`))?.name || priorityShown.sort((a, b) => b.creativity - a.creativity)[0]?.name || "None"],
-    ["Defensive anchor", curatedDefender?.name || priorityShown.filter((p) => p.broad === "Defender" || /defensive midfielder/i.test(p.pos)).sort((a, b) => b.defense - a.defense)[0]?.name || "Not enough defender data"]
-  ] : [
-    ["Top performer", "Key-player guide unavailable"],
-    ["Young player to watch", "Key-player guide unavailable"],
-    ["Most creative", "Key-player guide unavailable"],
-    ["Defensive anchor", "Not enough defender data"]
-  ];
+  const shown = clubWatchShownPlayers(club).filter((p) => !clubQ || `${p.name} ${p.country} ${p.pos}`.toLowerCase().includes(clubQ)).sort((a, b) => (b.star || 0) - (a.star || 0) || (b.roleScore || 0) - (a.roleScore || 0));
+  const hidden = clubHiddenPlayers(club);
+  const cards = clubInsightCards(shown);
   $("clubSummary").innerHTML = cards.map(([k, v]) => clickableMini(k, v, "club insight")).join("");
+  $("clubStatusLegend").innerHTML = shown.some((p) => p.eligibilityLabel) ? statusLegend() : "";
   const byCountry = countBy(shown, (p) => p.country);
   const byPos = countBy(shown, (p) => p.broad);
   renderBars("clubCountryChart", Object.entries(byCountry).map(([label, value]) => ({ label, value })), Math.max(1, ...Object.values(byCountry)));
   renderBars("clubPositionChart", Object.entries(byPos).map(([label, value]) => ({ label, value })), Math.max(1, ...Object.values(byPos)));
   renderSortableTable("clubTable", shown, state.clubSort, (sort) => state.clubSort = sort, false);
-  $("notShownList").innerHTML = hidden.length ? hidden.slice(0, 80).map((p) => `<div class="compact-item"><strong>${esc(p.name)}</strong><span>${esc(p.country)} | ${esc(p.pos)} | not in finalized qualified-country pool</span></div>`).join("") : `<div class="compact-item">Every matched ${esc(club)} player in the dataset belongs to a finalized qualified country.</div>`;
-  renderClubMatchups(club, shown, curatedClub);
+  $("notShownList").innerHTML = hidden.length ? hidden.slice(0, 80).map((p) => `<div class="compact-item"><strong>${esc(p.name)}</strong><span>${esc(p.country)} | ${esc(p.pos)} | ${esc(p.reason)}</span></div>`).join("") : `<div class="compact-item">No hidden players for this club under the current World Cup-linked rules.</div>`;
+  renderClubMatchups(club, shown);
   renderRadar();
 }
 
-function renderClubMatchups(club, shown, curatedClub) {
-  const rows = state.clubMatchups.get(club) || [];
+function renderClubMatchups(club, shown) {
+  const shownNames = new Set(shown.map((p) => normalizePlayerName(p.name)));
+  const rows = (state.clubMatchups.get(club) || []).filter((m) => shownNames.has(normalizePlayerName(m.player)));
   if (!rows.length) {
     $("clubMatchups").innerHTML = `<div class="compact-item">No major curated matchup available for this club yet.</div>`;
     return;
@@ -1124,8 +1930,11 @@ function countBy(rows, fn) {
 function renderPlanner() {
   const team = $("plannerTeam").value, date = $("plannerDate").value, stage = $("plannerStage").value, watch = $("watchabilityFilter").value, q = $("plannerSearch").value.toLowerCase();
   state.plannerSort = { key: $("plannerSortSelect").value || "date", dir: "asc" };
-  const clubLens = $("plannerClubLens").checked;
-  const list = state.matches.filter((m) => (!team || m.homeCode === team || m.awayCode === team) && (!date || m.ist.dateOnly === date) && (!stage || m.stage.stage_name === stage) && (!watch || (watch === "Weekend" ? m.ist.weekend : watch === "Favourites" ? state.favourites.has(m.id) : m.window === watch)) && (!clubLens || clubHasFixtureAngle(m)) && (!q || `${m.homeName} ${m.awayName} ${m.city.city_name} ${m.stage.stage_name}`.toLowerCase().includes(q)));
+  const plannerClub = $("plannerClubSelect").value;
+  $("plannerClubLens").disabled = !plannerClub;
+  if (!plannerClub) $("plannerClubLens").checked = false;
+  const clubLens = $("plannerClubLens").checked && plannerClub;
+  const list = state.matches.filter((m) => (!team || m.homeCode === team || m.awayCode === team) && (!date || m.ist.dateOnly === date) && (!stage || m.stage.stage_name === stage) && (!watch || (watch === "Weekend" ? m.ist.weekend : watch === "Favourites" ? state.favourites.has(m.id) : m.window === watch)) && (!clubLens || plannerClubPlayers(m).length) && (!q || `${m.homeName} ${m.awayName} ${m.city.city_name} ${m.stage.stage_name}`.toLowerCase().includes(q)));
   const defs = [["Prime Time", "7:00 PM to 11:30 PM IST"], ["Late Night", "11:30 PM to 2:30 AM IST"], ["Early Morning", "2:30 AM to 6:00 AM IST"], ["Weekend", "Saturday and Sunday IST"]];
   $("watchBuckets").innerHTML = defs.map(([k, help]) => `<button class="mini-card watch-bucket ${watch === k ? "active-filter" : ""}" data-window="${k}"><span>${help}</span><strong>${watch === k ? "✓ " : ""}${k}</strong><em>${watch === k ? "Active filter | " : ""}${state.matches.filter((m) => k === "Weekend" ? m.ist.weekend : m.window === k).length} matches</em></button>`).join("");
   $("watchBuckets").querySelectorAll(".watch-bucket").forEach((b) => b.addEventListener("click", () => { $("watchabilityFilter").value = b.dataset.window; renderPlanner(); }));
@@ -1138,9 +1947,10 @@ function renderPlanner() {
   document.querySelectorAll(".fav").forEach((btn) => btn.addEventListener("click", () => { state.favourites.has(btn.dataset.id) ? state.favourites.delete(btn.dataset.id) : state.favourites.add(btn.dataset.id); localStorage.setItem("fanRadarFavourites", JSON.stringify([...state.favourites])); renderPlanner(); }));
 }
 
-function clubHasFixtureAngle(m) {
-  if (!state.activeClub || !m.isFinalized) return false;
-  return activeClubPlayers(m).length > 0;
+function plannerClubPlayers(m) {
+  const club = $("plannerClubSelect")?.value;
+  if (!club || !m.isFinalized) return [];
+  return [...eligibleKeyPlayersFor(m.homeCode), ...eligibleKeyPlayersFor(m.awayCode)].filter((p) => p.club === club);
 }
 
 function sortPlanner(list) {
@@ -1157,7 +1967,7 @@ function renderPlannerTableHeader(total) {
 }
 
 function groupPlannerCards(list) {
-  if (!list.length) return `<div class="compact-item">No matches fit those filters.</div>`;
+  if (!list.length) return `<div class="compact-item">${$("plannerClubLens").checked && $("plannerClubSelect").value ? "No fixtures found for this club lens." : "No matches fit those filters."}</div>`;
   let last = "";
   return list.map((m) => {
     const date = m.ist.dateOnly;
@@ -1184,9 +1994,9 @@ function plannerCard(m) {
 }
 
 function clubAngleText(m) {
-  if (!state.activeClub) return "Choose a favourite club to add a supporter lens.";
-  const players = activeClubPlayers(m);
-  return players.length ? `${state.activeClub} angle: ${players.slice(0, 3).map((p) => p.name).join(", ")}` : "No selected-club player angle.";
+  if (!$("plannerClubLens").checked || !$("plannerClubSelect").value) return "Choose a club lens to add a supporter angle.";
+  const players = plannerClubPlayers(m);
+  return players.length ? `Club angle: ${players.slice(0, 3).map((p) => `${p.name} represents ${countryName(p.countryCode)}`).join("; ")}` : "No selected-club player angle.";
 }
 
 function countdown(date) {
@@ -1214,3 +2024,17 @@ function applyClubTheme(club = state.activeClub) {
   document.documentElement.style.setProperty("--gold", theme.colors[1]);
   document.documentElement.style.setProperty("--blue", theme.colors[2]);
 }
+
+function countryControlChanged(e) {
+  if (["countrySelect", "countryView", "countryPlayerSearch"].includes(e.target?.id)) renderCountry();
+}
+
+window.renderCountry = renderCountry;
+document.addEventListener("change", countryControlChanged);
+document.addEventListener("input", countryControlChanged);
+window.addEventListener("fanRadarCountryViewChange", renderCountry);
+setInterval(() => {
+  if (!$("countries")?.classList.contains("active")) return;
+  const signature = `${$("countrySelect")?.value}|${$("countryView")?.value}|${$("countryPlayerSearch")?.value}`;
+  if (signature !== state.countryUiSignature) renderCountry();
+}, 300);
