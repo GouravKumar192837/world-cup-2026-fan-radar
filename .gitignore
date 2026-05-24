@@ -1,7 +1,2 @@
 .browser-smoke/
 .edge-smoke/
-output/
-_site/
-tmp_*
-*.tmp
-*-output.png
