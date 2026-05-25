@@ -38,9 +38,10 @@ If a custom domain is added later, that can become the main public link.
 
 ### 1. Publish the app
 
-1. Keep working in this repo and push changes to `main`.
-2. GitHub Pages deploys the site through the included workflow.
-3. Share the same public URL with friends after updates.
+1. Do day-to-day work on a branch and push that branch to GitHub first.
+2. Merge to `main` only when you want the public GitHub Pages site updated.
+3. GitHub Pages deploys automatically from `main` through the included workflow.
+4. Share the same public URL with friends after `main` updates.
 
 ### 2. Maintain the app
 
@@ -55,7 +56,8 @@ After important data changes:
 
 1. Run a quick smoke pass on the app.
 2. Confirm one registry country, one curated non-registry country, and one unavailable country still behave correctly.
-3. Push the updated repo so GitHub Pages reflects the latest data.
+3. Push your working branch for backup and review.
+4. Merge or push to `main` only when you want GitHub Pages to reflect the latest data.
 
 For the full football-data operating model, including:
 

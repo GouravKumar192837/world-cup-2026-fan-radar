@@ -80,7 +80,8 @@ The expected flow is:
 5. Codex regenerates `data/country_coverage_tracker.csv` after meaningful data changes.
 6. Codex runs local static, data, desktop, and mobile smoke checks.
 7. Codex reports exact file-level changes.
-8. You review and push to GitHub.
+8. You review and push the working branch to GitHub.
+9. You merge or push to `main` only when you want GitHub Pages updated.
 
 ## Every 2-3 Days: What You Do
 
@@ -93,7 +94,8 @@ When the app is live and you want to keep it fresh:
    - if nothing changed, do nothing
    - if something changed, review the changed countries and files
 4. Ask for a quick smoke check if needed.
-5. Push the repo to GitHub so Pages updates.
+5. Push the working branch to GitHub first.
+6. Merge or push to `main` only when you want Pages updated.
 
 Default rhythm:
 

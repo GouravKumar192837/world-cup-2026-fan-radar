@@ -32,6 +32,8 @@ const state = {
   clubCountryPlayerIndex: new Map(),
   matchNeutralScores: new Map(),
   renderTimings: {},
+  profileTimings: {},
+  csvTimings: {},
   selectedXiPlayer: null,
   xiShowList: false,
   xiShowRoles: true,
@@ -65,7 +67,17 @@ const state = {
   plannerFiltersOpen: false,
   infoSheet: null,
   compare: new Map(),
-  favourites: new Set(JSON.parse(localStorage.getItem("fanRadarFavourites") || "[]"))
+  favourites: new Set(JSON.parse(localStorage.getItem("fanRadarFavourites") || "[]")),
+  loader: {
+    stage: "fixtures",
+    progress: 8,
+    visualProgress: 8,
+    label: "Loading fixture grid",
+    readyToEnter: false,
+    progressTimer: null,
+    entered: false,
+    stageStartedAt: 0
+  }
 };
 
 const COUNTRY_NAMES = {
@@ -140,6 +152,141 @@ function recordBootTiming(name, value) {
     window.__fanRadarBootTimings = { ...state.bootTimings };
     window[`__fanRadar${name[0].toUpperCase()}${name.slice(1)}`] = state.bootTimings[name];
   }
+}
+
+function recordProfileTiming(name, value) {
+  state.profileTimings[name] = Math.round(value);
+  if (typeof window !== "undefined") {
+    window.__fanRadarProfileTimings = { ...state.profileTimings };
+  }
+}
+
+function recordCsvTiming(url, stage, value) {
+  const key = `${url}::${stage}`;
+  state.csvTimings[key] = Math.round(value);
+  if (typeof window !== "undefined") {
+    window.__fanRadarCsvTimings = { ...state.csvTimings };
+  }
+}
+
+const LOADER_STAGES = {
+  fixtures: { label: "Loading fixture grid", progress: 12 },
+  guide: { label: "Reading team and city guide", progress: 34 },
+  scores: { label: "Building match angles", progress: 68 },
+  screen: { label: "Preparing the opening screen", progress: 86 },
+  ready: { label: "Ready when you are", progress: 100 }
+};
+
+const LOADER_SOFT_CAPS = {
+  fixtures: 62,
+  guide: 78,
+  scores: 90,
+  screen: 96,
+  ready: 100
+};
+const LOADER_MAX_BEFORE_READY = 96;
+const LOADER_DRIFT_TAU_MS = 2200;
+
+function renderLoaderProgress(progress) {
+  const clamped = clamp(progress, 0, 100);
+  const progressFill = $("loaderProgressFill");
+  if (progressFill) progressFill.style.setProperty("--loader-progress", `${clamped}%`);
+  const progressNode = document.querySelector(".loader-progress");
+  if (progressNode) progressNode.setAttribute("aria-valuenow", String(Math.round(clamped)));
+  if (typeof window !== "undefined") {
+    window.__fanRadarLoaderStage = { stage: state.loader.stage, progress: Math.round(clamped), label: state.loader.label };
+  }
+}
+
+function loaderStageCap(stage) {
+  return LOADER_SOFT_CAPS[stage] || 100;
+}
+
+function loaderDriftTarget() {
+  if (state.loader.readyToEnter) return 100;
+  const stage = state.loader.stage || "fixtures";
+  const cap = Math.min(loaderStageCap(stage), LOADER_MAX_BEFORE_READY);
+  const bootStartedAt = state.bootTimings.startedAt || nowMs();
+  const elapsed = Math.max(0, nowMs() - bootStartedAt);
+  const eased = 1 - Math.exp(-elapsed / LOADER_DRIFT_TAU_MS);
+  const timeTarget = 8 + (LOADER_MAX_BEFORE_READY - 8) * eased;
+  return Math.min(cap, timeTarget);
+}
+
+function stopLoaderMotion() {
+  if (state.loader.progressTimer) {
+    window.clearInterval(state.loader.progressTimer);
+    state.loader.progressTimer = null;
+  }
+}
+
+function startLoaderMotion() {
+  stopLoaderMotion();
+  renderLoaderProgress(state.loader.visualProgress || state.loader.progress || 8);
+  state.loader.progressTimer = window.setInterval(() => {
+    const current = state.loader.visualProgress || 0;
+    const milestone = state.loader.progress || 0;
+    const drift = loaderDriftTarget();
+    const target = state.loader.readyToEnter
+      ? 100
+      : Math.min(loaderStageCap(state.loader.stage), Math.max(milestone, drift));
+    let next = current;
+
+    if (current < target) {
+      const remaining = target - current;
+      const minStep = state.loader.readyToEnter ? 1.8 : 0.34;
+      const easing = state.loader.readyToEnter ? 0.4 : 0.13;
+      next = Math.min(target, current + Math.max(minStep, remaining * easing));
+    }
+
+    state.loader.visualProgress = next;
+    renderLoaderProgress(next);
+
+    if (state.loader.readyToEnter && !state.loader.entered && next >= 99.7) {
+      state.loader.entered = true;
+      stopLoaderMotion();
+      window.setTimeout(() => enterApp(), 90);
+    }
+  }, 80);
+}
+
+function setLoaderStage(stage, progressOverride = null) {
+  const config = LOADER_STAGES[stage] || LOADER_STAGES.fixtures;
+  const progress = Math.max(state.loader.progress || 0, progressOverride ?? config.progress);
+  const stageChanged = state.loader.stage !== stage;
+  state.loader = {
+    ...state.loader,
+    stage,
+    progress,
+    label: config.label,
+    stageStartedAt: stageChanged ? nowMs() : (state.loader.stageStartedAt || nowMs())
+  };
+  const stageLabel = $("loaderStageLabel");
+  const loaderPanel = document.querySelector(".loader-panel");
+  if (stageLabel) stageLabel.textContent = config.label;
+  if ((state.loader.visualProgress || 0) < 8) state.loader.visualProgress = 8;
+  if (stage !== "ready") {
+    state.loader.visualProgress = Math.max(state.loader.visualProgress || 8, Math.min(progress, loaderStageCap(stage)));
+  }
+  renderLoaderProgress(state.loader.visualProgress || progress);
+  loaderPanel?.classList.toggle("ready", stage === "ready");
+}
+
+function markLoaderReady() {
+  state.loader.readyToEnter = true;
+  setLoaderStage("ready", 100);
+}
+
+function enterApp() {
+  stopLoaderMotion();
+  document.body.classList.remove("boot-loading");
+  $("loader")?.classList.add("hidden");
+}
+
+function failLoader() {
+  stopLoaderMotion();
+  document.body.classList.remove("boot-loading");
+  $("loader")?.classList.add("hidden");
 }
 
 const CLUB_DISPLAY_SHORT = {
@@ -388,7 +535,8 @@ boot();
 async function boot() {
   const started = nowMs();
   state.bootTimings.startedAt = started;
-  $("loader").classList.add("hidden");
+  startLoaderMotion();
+  setLoaderStage("fixtures");
   try {
     const [matches, teams, cities, stages, countryMap, freshness, keyPlayers, teamProfiles, rivalryOverrides] = await Promise.all([
       loadCsv(DATA.matches),
@@ -401,6 +549,7 @@ async function boot() {
       loadOptionalCsv(DATA.teamProfiles, "team hype guide"),
       loadOptionalCsv(DATA.rivalryOverrides, "rivalry guide")
     ]);
+    setLoaderStage("guide");
     state.rows = { matches, teams, cities, stages, countryMap, freshness, keyPlayers, teamProfiles, rivalryOverrides, players: [] };
     buildCountryAliases(countryMap);
     teams.forEach((t) => state.teams.set(t.id, { ...t, real: isRealTeam(t) }));
@@ -409,19 +558,21 @@ async function boot() {
     buildV3HypeLayers(keyPlayers, teamProfiles, rivalryOverrides);
     buildLightweightCountries();
     buildMatches(matches);
+    setLoaderStage("scores");
     buildNeutralScoreCache();
     recordBootTiming("criticalFetchMs", nowMs() - started);
     state.activeClub = "";
     wireUi();
     fillSelects(false);
+    setLoaderStage("screen");
     renderInitial();
     recordBootTiming("firstMustWatchRenderMs", nowMs() - started);
     recordBootTiming("initialBootMs", nowMs() - started);
     window.__fanRadarInitialBootMs = state.bootTimings.initialBootMs;
-    $("loader").classList.add("hidden");
+    markLoaderReady();
     scheduleFullHydration();
   } catch (err) {
-    $("loader").classList.add("hidden");
+    failLoader();
     $("error").classList.remove("hidden");
     $("error").textContent = `Could not load app data: ${err.message}`;
   }
@@ -451,22 +602,29 @@ async function hydrateFullData() {
       loadOptionalCsv(DATA.playerRegistry, "player registry"),
       loadOptionalCsv(DATA.squadStatus, "squad status")
     ]);
+    recordBootTiming("fullHydrationFetchMs", nowMs() - started);
     state.rows = { ...state.rows, players, countryStories, matchStorylines, expectedXi, clubMatchups, playerRegistry, squadStatus };
     buildEligibilityLayers(playerRegistry, squadStatus);
+    const buildPlayersStarted = nowMs();
     buildPlayers(players);
+    recordBootTiming("buildPlayersMs", nowMs() - buildPlayersStarted);
     buildV4GuideLayers(countryStories, matchStorylines, expectedXi, clubMatchups);
     finalizeFullData();
     state.fullHydrated = true;
     fillSelects(true);
+    const renderAllStarted = nowMs();
     renderAll(false);
+    recordBootTiming("finalRenderMs", nowMs() - renderAllStarted);
     recordBootTiming("fullHydrationMs", nowMs() - started);
     recordBootTiming("fullHydrationReadyMs", nowMs() - (state.bootTimings.startedAt || started));
     window.__fanRadarFullHydrationMs = state.bootTimings.fullHydrationMs;
+    return true;
   } catch (err) {
     state.missingV3.push(`full data hydration failed: ${err.message}`);
     document.querySelectorAll(".deferred-loading").forEach((el) => {
       el.textContent = "This section could not finish loading. Refresh the page and try again.";
     });
+    return false;
   }
 }
 
@@ -494,8 +652,12 @@ function finalizeFullData() {
     canonicalClubMatchups.set(displayClub, [...(canonicalClubMatchups.get(displayClub) || []), ...cleanRows]);
   });
   state.clubMatchups = canonicalClubMatchups;
+  const buildCountriesStarted = nowMs();
   buildCountries();
+  recordBootTiming("buildCountriesMs", nowMs() - buildCountriesStarted);
+  const buildClubIndexStarted = nowMs();
   buildClubCountryPlayerIndex();
+  recordBootTiming("buildClubCountryPlayerIndexMs", nowMs() - buildClubIndexStarted);
   buildNeutralScoreCache();
   state.clubs = canonicalClubList([
     ...state.playersAll.map((p) => p.club).filter(Boolean),
@@ -508,9 +670,19 @@ function finalizeFullData() {
 }
 
 async function loadCsv(url) {
+  const started = nowMs();
   const res = await fetch(url);
   if (!res.ok) throw new Error(`${url} returned ${res.status}`);
-  return parseCsv(await res.text());
+  const fetchDone = nowMs();
+  const text = await res.text();
+  const textDone = nowMs();
+  const parsed = parseCsv(text);
+  const parsedDone = nowMs();
+  recordCsvTiming(url, "fetchMs", fetchDone - started);
+  recordCsvTiming(url, "textMs", textDone - fetchDone);
+  recordCsvTiming(url, "parseMs", parsedDone - textDone);
+  recordCsvTiming(url, "totalMs", parsedDone - started);
+  return parsed;
 }
 
 async function loadOptionalCsv(url, label) {
@@ -986,9 +1158,15 @@ function rankByPosition(players) {
 
 function buildCountries() {
   const q = qualifiedCodes();
+  const playersByCode = new Map();
+  state.worldCupPlayerPool.forEach((player) => {
+    const rows = playersByCode.get(player.code);
+    if (rows) rows.push(player);
+    else playersByCode.set(player.code, [player]);
+  });
   state.countries.clear();
   q.forEach((code) => {
-    const players = state.worldCupPlayerPool.filter((p) => p.code === code);
+    const players = playersByCode.get(code) || [];
     const top = players.filter((p) => p.min >= 450).sort((a, b) => b.overall - a.overall).slice(0, 22);
     state.countries.set(code, {
       code,
@@ -1274,10 +1452,11 @@ function naturalReason(s) {
 }
 
 function matchReasonBullets(s) {
-  const bullets = [matchHookText(s)];
+  const bullets = [];
+  const hook = matchHookText(s);
+  if (hook) bullets.push(hook);
   const clubText = clubLensText(s.club, s.clubPlayers);
   if (clubText) bullets.push(`Club angle: ${clubText}.`);
-  bullets.push(`India watch: ${s.match.window}${s.match.ist.weekend ? " + weekend" : ""}.`);
   return bullets;
 }
 
@@ -1285,8 +1464,11 @@ function matchHookText(s) {
   const a = headlinePlayers(s.keyA).join(", ");
   const b = headlinePlayers(s.keyB).join(", ");
   const leader = watchDriverText(s);
-  if (a && b) return `Match hook: ${s.c1.name} vs ${s.c2.name} rates well for ${leader}, with ${a} against ${b}.`;
-  return `Match hook: ${s.c1.name} vs ${s.c2.name} rates well for ${leader}.`;
+  const lead = leader ? leader.charAt(0).toUpperCase() + leader.slice(1) : "";
+  if (a && b) return `${lead} with ${a} against ${b}.`;
+  if (a) return `${lead} through ${a}.`;
+  if (b) return `${lead} through ${b}.`;
+  return "";
 }
 
 function watchDriverText(s) {
@@ -1390,15 +1572,17 @@ function wireUi() {
 }
 
 function fillSelects(full = state.fullHydrated) {
-  const realTeams = [...state.teams.values()].filter((t) => t.real).sort((a, b) => countryName(normalizeCountryCode(a.fifa_code, a.team_name)).localeCompare(countryName(normalizeCountryCode(b.fifa_code, b.team_name))));
-  $("countrySelect").innerHTML = realTeams.map((t) => {
-    const code = normalizeCountryCode(t.fifa_code, t.team_name);
-    return `<option value="${code}">${esc(countryName(code))}</option>`;
-  }).join("");
-  $("plannerTeam").innerHTML = `<option value="">All teams</option>` + realTeams.map((t) => {
-    const code = normalizeCountryCode(t.fifa_code, t.team_name);
-    return `<option value="${code}">${esc(countryName(code))}</option>`;
-  }).join("");
+  const started = nowMs();
+  const realTeams = [...state.teams.values()]
+    .filter((t) => t.real)
+    .map((team) => {
+      const code = normalizeCountryCode(team.fifa_code, team.team_name);
+      return { code, label: countryName(code) };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const countryOptions = realTeams.map((team) => `<option value="${team.code}">${esc(team.label)}</option>`).join("");
+  $("countrySelect").innerHTML = countryOptions;
+  $("plannerTeam").innerHTML = `<option value="">All teams</option>${countryOptions}`;
   $("plannerStage").innerHTML = `<option value="">All stages</option>` + state.rows.stages.map((s) => `<option value="${esc(s.stage_name)}">${esc(s.stage_name)}</option>`).join("");
   if (!full) {
     $("hypeClubSelect").innerHTML = `<option value="">Club lens loading...</option>`;
@@ -1411,28 +1595,29 @@ function fillSelects(full = state.fullHydrated) {
       const label = $(id)?.querySelector("option")?.textContent || "All";
       $(id).innerHTML = `<option value="">${esc(label)}</option>`;
     });
+    recordProfileTiming("fillSelectsMs", nowMs() - started);
     return;
   }
   $("hypeClubSelect").disabled = false;
   $("clubWatchSelect").disabled = false;
   $("plannerClubSelect").disabled = false;
-  const allClubNames = canonicalClubList(state.clubs, state.clubsRaw);
-  state.clubs = allClubNames;
-  state.clubWatchClubs = canonicalClubList(state.clubWatchClubs, state.clubsRaw).filter((club) => clubHasRenderableWatchRows(club));
+  const allClubNames = state.clubs;
+  const clubWatchNames = state.clubWatchClubs;
   const clubOpts = allClubNames.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
   const clubWatchOpts = state.clubWatchClubs.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
   $("hypeClubSelect").innerHTML = `<option value="">No favourite club lens</option>${clubOpts}`;
-  $("clubWatchSelect").innerHTML = state.clubWatchClubs.length
+  $("clubWatchSelect").innerHTML = clubWatchNames.length
     ? `<option value="">Choose a club</option>${clubWatchOpts}`
     : `<option value="">No club data available</option>`;
   $("plannerClubSelect").innerHTML = `<option value="">Choose a club</option>${clubOpts}`;
-  state.clubWatchClub = state.clubWatchClubs.includes(state.clubWatchClub) ? state.clubWatchClub : preferredClub();
+  state.clubWatchClub = clubWatchNames.includes(state.clubWatchClub) ? state.clubWatchClub : preferredClub();
   $("hypeClubSelect").value = state.activeClub;
   $("clubWatchSelect").value = state.clubWatchClub;
   uniqueOptions("nationalityFilter", [...new Set(state.worldCupPlayerPool.map((p) => p.code))].map((c) => [c, countryName(c)]), "All nationalities");
   uniqueOptions("clubFilter", canonicalClubList(state.worldCupPlayerPool.map((p) => p.club).filter(Boolean), state.clubsRaw).map((c) => [c, c]), "All clubs");
   uniqueOptions("leagueFilter", [...new Set(state.worldCupPlayerPool.map((p) => p.league).filter(Boolean))].sort().map((c) => [c, c]), "All leagues");
   uniqueOptions("positionFilter", ["Goalkeeper", "Defender", "Midfielder", "Forward", "Outfield"].map((p) => [p, p]), "All positions");
+  recordProfileTiming("fillSelectsMs", nowMs() - started);
 }
 
 function uniqueOptions(id, vals, placeholder = "") {
@@ -1449,16 +1634,28 @@ function renderInitial() {
 }
 
 function renderAll(resetActive = true) {
+  const started = nowMs();
   applyClubTheme();
   $("matchCount").textContent = `${state.matches.length} fixtures`;
   $("teamCount").textContent = `${[...state.teams.values()].filter((t) => t.real).length} qualified teams`;
   $("playerCount").textContent = `${state.worldCupPlayerPool.length.toLocaleString()} qualified player-pool rows`;
+  const matchesStarted = nowMs();
   renderMatches();
+  recordProfileTiming("renderAllMatchesMs", nowMs() - matchesStarted);
+  const countryStarted = nowMs();
   renderCountry();
+  recordProfileTiming("renderAllCountryMs", nowMs() - countryStarted);
+  const playersStarted = nowMs();
   renderPlayers();
+  recordProfileTiming("renderAllPlayersMs", nowMs() - playersStarted);
+  const clubStarted = nowMs();
   renderClub();
+  recordProfileTiming("renderAllClubMs", nowMs() - clubStarted);
+  const plannerStarted = nowMs();
   renderPlanner();
+  recordProfileTiming("renderAllPlannerMs", nowMs() - plannerStarted);
   if (resetActive) setActiveTab("matches");
+  recordProfileTiming("renderAllMs", nowMs() - started);
 }
 
 function hasPlayerFilters() {

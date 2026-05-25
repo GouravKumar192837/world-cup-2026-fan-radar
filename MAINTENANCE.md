@@ -132,12 +132,18 @@ The app is designed to be published as a static GitHub Pages site.
 
 Expected flow:
 
-1. Push the repo to GitHub.
+1. Push your working branch to GitHub first so the changes are backed up and reviewable.
 2. Keep the default branch as `main`.
-3. Enable GitHub Pages with GitHub Actions as the deployment source.
-4. Let `.github/workflows/deploy-pages.yml` publish the runtime artifact: `index.html`, `app.js`, `styles.css`, and `data/`.
-5. Share the GitHub Pages URL with viewers:
+3. Merge to `main` only when you want the live GitHub Pages site updated.
+4. Enable GitHub Pages with GitHub Actions as the deployment source.
+5. Let `.github/workflows/deploy-pages.yml` publish the runtime artifact from `main`: `index.html`, `app.js`, `styles.css`, and `data/`.
+6. Share the GitHub Pages URL with viewers:
    `https://gouravkumar192837.github.io/world-cup-2026-fan-radar/`
+
+Current deployment rule:
+
+- pushes to branches other than `main` do not update the public site
+- pushes to `main` trigger the Pages deployment workflow
 
 Smoke-check before publishing:
 
@@ -149,14 +155,20 @@ Smoke-check before publishing:
 
 ## Release Checklist
 
-Before every push:
+Before every branch push:
 
 1. Update only the relevant active data files.
 2. Parse edited CSVs and confirm required fields are present.
 3. Run local desktop and mobile smoke checks.
 4. Confirm startup performance locally.
 5. Push only after the release files are staged intentionally.
-6. Verify the GitHub Pages deployment and public URL after push.
+
+Before every `main` release push or merge:
+
+1. Confirm the branch diff is exactly what you want public.
+2. Re-run the smoke checks for loader/startup, desktop/mobile navigation, one registry country, one curated non-registry country, and one unavailable country.
+3. Push or merge to `main`.
+4. Verify the GitHub Pages deployment and public URL after the `main` update.
 
 ## Archive Policy
 
